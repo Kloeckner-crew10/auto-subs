@@ -1,3 +1,16 @@
+# AutoSubs – crew10-Version
+
+> **Diese Version installieren (Mac, Apple Silicon):**
+> **[⬇️ AutoSubs-crew10-Mac-ARM.pkg](https://github.com/Kloeckner-crew10/auto-subs/releases/latest/download/AutoSubs-crew10-Mac-ARM.pkg)**
+>
+> Doppelklick auf die Datei. Blockiert macOS sie („kann nicht geöffnet werden“ / „nicht verifizierter Entwickler“): **Systemeinstellungen → Datenschutz & Sicherheit → ganz unten „Dennoch öffnen“** und bestätigen, dann den Installer durchklicken. Danach in DaVinci Resolve **Workspace → Scripts → AutoSubs** starten.
+>
+> Enthält Kundenprofile (z. B. Tipico), Double Proof, Ausgabe auf die Resolve-Untertitelspur und Safe Zones. Updates kommen automatisch aus diesem Repository. Details: [CREW10.md](CREW10.md).
+>
+> Die Download-Links weiter unten führen zur **Original-Version** von tmoroney ohne diese Funktionen.
+
+---
+
 # AutoSubs
 
 Local-first AI subtitles. No cloud, no subscription, no data leaving your machine.

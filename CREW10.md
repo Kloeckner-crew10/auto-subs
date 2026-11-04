@@ -2,6 +2,18 @@
 
 Eigene Version von [AutoSubs](https://github.com/tmoroney/auto-subs) (MIT-Lizenz) mit Erweiterungen für unsere Kundenproduktionen. Branch: `crew10`.
 
+## Installieren
+
+1. [AutoSubs-crew10-Mac-ARM.pkg](https://github.com/Kloeckner-crew10/auto-subs/releases/latest/download/AutoSubs-crew10-Mac-ARM.pkg) laden (Mac mit Apple Silicon).
+2. Doppelklick. Blockiert macOS die Datei: **Systemeinstellungen → Datenschutz & Sicherheit → ganz unten „Dennoch öffnen“**, bestätigen, Installer durchklicken. (Alternativ im Terminal: `xattr -d com.apple.quarantine ~/Downloads/AutoSubs-crew10-Mac-ARM.pkg`, dann Doppelklick.)
+3. In DaVinci Resolve **Workspace → Scripts → AutoSubs** starten.
+
+Eine vorhandene Original-AutoSubs-Installation wird ersetzt; Einstellungen und Transkripte bleiben. Updates kommen automatisch aus diesem Repository (eigener Signaturschlüssel, nicht der von tmoroney).
+
+## Neue Version veröffentlichen
+
+Version erhöhen (`npm run bump-version -- 3.11.2` in `AutoSubs-App`), dann `AutoSubs-App/scripts/release-crew10.sh` ausführen. Das Skript baut App und Installer, signiert das Update mit dem Schlüssel `~/.tauri/crew10-autosubs.key` und lädt alles als GitHub-Release hoch. **Den Schlüssel sichern:** ohne ihn können installierte Apps keine Updates mehr annehmen.
+
 ## Was neu ist
 
 ### Kundenprofile (Zeile „Kunde“)
