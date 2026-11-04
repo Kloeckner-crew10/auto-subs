@@ -13,8 +13,11 @@ import { useIntegration } from "@/contexts/IntegrationContext";
 import { useErrorDialog } from "@/contexts/ErrorDialogContext";
 import { ResolveApiError } from "@/api/resolve-api";
 import SubSlateCard from "@/components/ui/SubSlateCard";
-import type { TranscriptionOptions, EnsureModelsRequest, EnsureModelsResponse } from "@/types";
+import type { TranscriptionOptions, EnsureModelsRequest, EnsureModelsResponse, ProofreadReport } from "@/types";
+import { toast } from "sonner";
+import i18n from "@/i18n";
 import { getActiveCensorWords } from "@/censor/merge";
+import { getActiveProfile, profilePrompt, profileRules } from "@/lib/customer-profiles";
 import { TranscriptionPanelView } from "./transcription-panel-view";
 import { describeError } from "./utils";
 
@@ -208,6 +211,10 @@ export function TranscriptionPanel({
   }, [processingSteps]);
 
   const willUseForcedAlignment = enableForcedAlignment && !translate;
+  // Double proof runs only with a different model and without translation
+  // (a translated transcript cannot be checked against the spoken audio).
+  const proofModel = useSettingsStore((s) => s.proofModel);
+  const willProofread = proofModel !== null && proofModel !== model && !translate;
 
   React.useEffect(() => {
     const cleanup = setupEventListeners({
@@ -216,11 +223,13 @@ export function TranscriptionPanel({
       enableForcedAlignment: willUseForcedAlignment,
       enableDiarize,
       audioInputMode: effectiveMode,
+      enableProofread: willProofread,
     });
 
     return cleanup;
   }, [
     setupEventListeners,
+    willProofread,
     targetLanguage,
     language,
     willUseForcedAlignment,
@@ -293,6 +302,9 @@ export function TranscriptionPanel({
       return;
     }
 
+    const proofModelValue =
+      willProofread && proofModel !== null ? modelsState[proofModel]?.value ?? null : null;
+
     setIsProcessing(true);
     setTranscriptionProgress(0);
     clearProgressSteps();
@@ -303,6 +315,7 @@ export function TranscriptionPanel({
       enableForcedAlignment: willUseForcedAlignment,
       enableDiarize,
       audioInputMode: effectiveMode,
+      enableProofread: willProofread,
     });
 
     try {
@@ -329,6 +342,21 @@ export function TranscriptionPanel({
         invoke<EnsureModelsResponse>("ensure_models", { request: ensureModelsRequest }),
       ]);
 
+      // The proof model is prepared after the main one so their downloads do
+      // not race for the progress display.
+      const proofModelPaths = proofModelValue
+        ? await invoke<EnsureModelsResponse>("ensure_models", {
+            request: {
+              model: proofModelValue,
+              enableVad,
+              enableDiarize: false,
+              enableForcedAlignment: false,
+              maxSpeakers: null,
+              diarizeBackend,
+            } satisfies EnsureModelsRequest,
+          })
+        : null;
+
       if (!audioInfo) {
         // `getSourceAudio` returns null only on user-initiated cancellation.
         // Silently clean up without showing an error dialog.
@@ -336,6 +364,7 @@ export function TranscriptionPanel({
         return;
       }
 
+      const activeProfile = getActiveProfile(useSettingsStore.getState());
       const options: TranscriptionOptions = {
         audioPath: audioInfo.path,
         offset: Math.round(audioInfo.offset * 1000) / 1000,
@@ -366,7 +395,11 @@ export function TranscriptionPanel({
         removePunctuation,
         censoredWords: enableCensor ? getActiveCensorWords(useSettingsStore.getState()) : [],
         censorStyle,
-        customPrompt: customPrompt.trim() || undefined,
+        customPrompt: profilePrompt(activeProfile, customPrompt) || undefined,
+        rules: profileRules(activeProfile),
+        proofModel: proofModelValue ?? undefined,
+        proofModelPath: proofModelPaths?.asrModelPath,
+        proofPolicy: useSettingsStore.getState().proofPolicy,
         asrModelPath: modelPaths.asrModelPath,
         vadModelPath: modelPaths.vadModelPath,
         diarizeSegmentPath: modelPaths.diarizeSegmentPath,
@@ -376,6 +409,7 @@ export function TranscriptionPanel({
       };
 
       const transcript = await invoke("transcribe_audio", { options });
+      announceProofread((transcript as { proofread?: ProofreadReport }).proofread);
 
       completeAllProgressSteps();
 
@@ -513,4 +547,32 @@ export function TranscriptionPanel({
       />
     </>
   );
+}
+
+/** Tell the user what the second model changed (or why it could not run). */
+function announceProofread(report: ProofreadReport | undefined) {
+  if (!report) return;
+  if (report.error) {
+    toast.error(i18n.t("proof.toast.failed"), { description: report.error, closeButton: true });
+    return;
+  }
+  const applied = report.changes.filter((c) => c.applied);
+  const open = report.changes.length - applied.length;
+  const sample = applied
+    .slice(0, 6)
+    .map((c) => `${c.original} → ${c.proposed}`)
+    .join(", ");
+  toast.success(
+    i18n.t("proof.toast.done", { applied: applied.length, compared: report.comparedWords }),
+    {
+      description: [sample, open > 0 ? i18n.t("proof.toast.open", { count: open }) : ""]
+        .filter(Boolean)
+        .join(" · "),
+      duration: 12000,
+      closeButton: true,
+    },
+  );
+  if (report.changes.length > 0) {
+    console.info("[AutoSubs] Double proof changes", report.changes);
+  }
 }

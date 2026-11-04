@@ -85,6 +85,7 @@ function caption_style.kind_of(comp, templateName)
 end
 
 --- Per-word highlight timing, as frame offsets into the caption's own comp.
+--- Each entry also carries `keyword` (true when the app flagged the word).
 function caption_style.word_timing(words, frameRate, segmentStart)
     local result = {}
     local startIndex = 0
@@ -96,6 +97,9 @@ function caption_style.word_timing(words, frameRate, segmentStart)
             endIndex   = endIndex,
             startFrame = math.floor((word.start - segmentStart) * frameRate),
             endFrame   = math.floor((word["end"] - segmentStart) * frameRate),
+            -- Keyword words (e.g. names from the user's keyword list) get the
+            -- macro's Keyword Color instead of the normal fill colour.
+            keyword    = (word.keyword == true),
         })
         startIndex = endIndex + 1
     end

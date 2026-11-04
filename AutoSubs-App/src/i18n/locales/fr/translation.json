@@ -468,7 +468,8 @@
     "normaliseAudio": "Normalisation de l'audio",
     "preparingAudio": "Préparation de l'audio...",
     "processing": "Traitement",
-    "export": "Export"
+    "export": "Export",
+    "proofread": "Double vérification (modèle 2)"
   },
   "subtitles": {
     "title": "Sous-titres",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "Choisir un style",
     "speakerCount_one": "{{count}} intervenant",
-    "speakerCount_other": "{{count}} intervenants"
+    "speakerCount_other": "{{count}} intervenants",
+    "target": {
+      "label": "Sortie en",
+      "video": "Piste vidéo (Fusion)",
+      "subtitle": "Piste de sous-titres (texte)",
+      "both": "Les deux"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "Impossible d'ajouter les sous-titres à la timeline",
     "clipsBlocked": "Impossible de placer les sous-titres sur la piste de sortie. Essayez 'Add to New Track'.",
     "reformatFailed": "Échec du reformatage"
+  },
+  "profiles": {
+    "rowLabel": "Client",
+    "none": "Aucun profil",
+    "new": "Nouveau profil client",
+    "edit": "Modifier le profil",
+    "unnamed": "Sans nom",
+    "dialogDescription": "Style, orthographes et timing pour un client.",
+    "name": "Nom",
+    "style": "Style des sous-titres",
+    "keepStyle": "Garder le style actuel",
+    "keywords": "Termes mis en avant",
+    "keywordsHelp": "Un par ligne, p. ex. joueurs et clubs. Toujours dans cette couleur.",
+    "replacements": "Orthographes",
+    "replacementsHelp": "Une par ligne : faux => juste. Vide à droite supprime le mot.",
+    "timing": "Timing (secondes)",
+    "timingHelp": "Laisser vide pour les valeurs par défaut.",
+    "minDuration": "Durée min.",
+    "maxDuration": "Durée max.",
+    "pauseSplit": "Pause coupe",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "keywordColor": "Couleur des termes"
+  },
+  "proof": {
+    "rowLabel": "Double vérif.",
+    "off": "Désactivé",
+    "policy": {
+      "confidence": "Le plus sûr gagne",
+      "proof": "Le modèle 2 gagne",
+      "report": "Signaler seulement"
+    },
+    "notWithTranslate": "Indisponible pendant la traduction.",
+    "sameModel": "Choisissez un autre modèle que ci-dessus.",
+    "toast": {
+      "failed": "Double vérification échouée, résultat du modèle 1 conservé.",
+      "done": "Double vérification : {{applied}} mots corrigés ({{compared}} vérifiés)",
+      "open": "{{count}} écarts non appliqués"
+    },
+    "suggestion": "Suggestion :",
+    "accept": "Appliquer",
+    "dismiss": "Ignorer"
+  },
+  "safeZone": {
+    "label": "Plateforme / zone sûre",
+    "none": "Aucune",
+    "position": "Bas des sous-titres à env. {{y}} px du bas ({{percent}} %), timeline {{width}}×{{height}}.",
+    "noResolution": "Lecture de la résolution…",
+    "mismatch": "La timeline n’est pas en {{aspect}}.",
+    "show": "Afficher le guide",
+    "hide": "Retirer le guide",
+    "added": "Guide sur la piste du haut",
+    "removeHint": "Retirez-le avant l’export.",
+    "partial": "Le guide ne couvre pas toute la timeline.",
+    "removed": "Guide retiré",
+    "failed": "Échec de la zone sûre"
   }
 }

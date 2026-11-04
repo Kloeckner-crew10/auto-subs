@@ -1,3 +1,5 @@
+import { getActiveProfile, profileKeywords } from "@/lib/customer-profiles";
+import { useSettingsStore } from "@/stores/settings-store";
 import { invoke } from '@tauri-apps/api/core';
 import { getSubtitleDocumentPath, getAudioExportDir } from '@/utils/file-utils';
 import { Speaker, Template, TimelineInfo } from '@/types';
@@ -205,6 +207,11 @@ export interface GeneratePreviewResult {
   fontSwap?: FontSwapInfo | null;
 }
 
+/** Words the caption macro colours (players, clubs) for the active customer. */
+function activeProfileKeywords(): string[] {
+  return profileKeywords(getActiveProfile(useSettingsStore.getState()));
+}
+
 export async function checkTrackConflicts(
   filename: string,
   outputTrack: string,
@@ -228,6 +235,7 @@ export async function addSubtitlesToTimeline(
   const data = await callResolve({
     func: 'AddSubtitles',
     filePath,
+    keywords: activeProfileKeywords(),
     templateName: currentTemplate,
     trackIndex: outputTrack,
     conflictMode,
@@ -242,6 +250,35 @@ export async function addSubtitlesToTimeline(
   return data;
 }
 
+/**
+ * Put the subtitles on Resolve's own subtitle track as plain text (no Fusion).
+ * `srtPath` is an SRT file the app has already written to disk.
+ */
+export async function addSubtitleTrackToTimeline(srtPath: string): Promise<{ count?: number }> {
+  const data = await callResolve({ func: 'AddSubtitleTrack', srtPath });
+  throwIfError(data, 'AddSubtitleTrack');
+  return data;
+}
+
+export async function getTimelineResolution(): Promise<{ width: number; height: number }> {
+  const data = await callResolve({ func: 'GetTimelineResolution' });
+  throwIfError(data, 'GetTimelineResolution');
+  return data;
+}
+
+/** Lay a guide image on its own top video track ("AutoSubs Safe Zone"). */
+export async function addSafeZoneOverlay(pngPath: string): Promise<{ covered?: boolean }> {
+  const data = await callResolve({ func: 'AddSafeZoneOverlay', pngPath });
+  throwIfError(data, 'AddSafeZoneOverlay');
+  return data;
+}
+
+export async function removeSafeZoneOverlay(): Promise<{ removed?: boolean }> {
+  const data = await callResolve({ func: 'RemoveSafeZoneOverlay' });
+  throwIfError(data, 'RemoveSafeZoneOverlay');
+  return data;
+}
+
 export async function applyStylesToTimeline(
   filename: string,
   targetSpeakerId?: string,
@@ -251,6 +288,7 @@ export async function applyStylesToTimeline(
   const data = await callResolve({
     func: 'BatchApplyStyle',
     filePath,
+    keywords: activeProfileKeywords(),
     targetSpeakerId,
     presetSettings,
   });

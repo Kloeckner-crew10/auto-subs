@@ -484,7 +484,8 @@
     "speakersFound_other": "{{count}} speakers",
     "transcribe": "Speech to text",
     "refine": "Aligning word timings",
-    "finish": "Formatting subtitles"
+    "finish": "Formatting subtitles",
+    "proofread": "Double proof (model 2)"
   },
   "subtitles": {
     "title": "Subtitles",
@@ -712,11 +713,73 @@
     },
     "chooseStyle": "Choose a caption style",
     "speakerCount_one": "{{count}} speaker",
-    "speakerCount_other": "{{count}} speakers"
+    "speakerCount_other": "{{count}} speakers",
+    "target": {
+      "label": "Output as",
+      "video": "Video track (Fusion captions)",
+      "subtitle": "Subtitle track (text only)",
+      "both": "Both"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "Couldn't add subtitles to timeline",
     "clipsBlocked": "Couldn't place captions on the output track. Try 'Add to New Track'.",
     "reformatFailed": "Reformat failed"
+  },
+  "profiles": {
+    "rowLabel": "Customer",
+    "none": "No profile",
+    "new": "New customer profile",
+    "edit": "Edit profile",
+    "unnamed": "Untitled",
+    "dialogDescription": "Style, spellings and timing for one customer.",
+    "name": "Name",
+    "style": "Caption style",
+    "keepStyle": "Keep current style",
+    "keywords": "Highlighted terms",
+    "keywordsHelp": "One term per line, e.g. players and clubs. Always fully in this color.",
+    "replacements": "Spellings",
+    "replacementsHelp": "One per line: wrong => right. Empty right side removes the word.",
+    "timing": "Timing (seconds)",
+    "timingHelp": "Leave empty for the defaults.",
+    "minDuration": "Min duration",
+    "maxDuration": "Max duration",
+    "pauseSplit": "Pause splits",
+    "delete": "Delete",
+    "save": "Save",
+    "keywordColor": "Term color"
+  },
+  "proof": {
+    "rowLabel": "Double proof",
+    "off": "Off",
+    "policy": {
+      "confidence": "Surer model wins",
+      "proof": "Model 2 wins",
+      "report": "Report only"
+    },
+    "notWithTranslate": "Not available while translating.",
+    "sameModel": "Pick a different model than above.",
+    "toast": {
+      "failed": "Double proof failed, keeping the model 1 result.",
+      "done": "Double proof: {{applied}} words corrected ({{compared}} checked)",
+      "open": "{{count}} differences not applied"
+    },
+    "suggestion": "Suggestion:",
+    "accept": "Apply",
+    "dismiss": "Dismiss"
+  },
+  "safeZone": {
+    "label": "Platform / safe zone",
+    "none": "None",
+    "position": "Subtitle bottom edge about {{y}} px from the bottom ({{percent}} %), timeline {{width}}×{{height}}.",
+    "noResolution": "Reading timeline resolution…",
+    "mismatch": "The timeline is not {{aspect}}.",
+    "show": "Show guide",
+    "hide": "Remove guide",
+    "added": "Safe-zone guide is on the top track",
+    "removeHint": "Remove it with “Remove guide” before export.",
+    "partial": "The guide does not cover the whole timeline.",
+    "removed": "Safe-zone guide removed",
+    "failed": "Safe zone failed"
   }
 }

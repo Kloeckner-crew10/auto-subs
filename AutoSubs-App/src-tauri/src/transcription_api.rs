@@ -13,6 +13,7 @@ use tauri::{AppHandle, Emitter, Manager, Runtime, command};
 use transcription_engine::{
     Callbacks, CensorStyle, ContentFormatting, DiarizeBackend, Engine, EngineConfig, LabeledProgressFn, PostProcessConfig, ProgressType, SegmentStage,
     Segment as WDSegment, TextCase, TextDensity, TranscribeOptions, process_segments,
+    build_post_process_config, cross_check, CrossCheckPolicy, CrossCheckReport, SubtitleRules,
 };
 
 // Frontend-compatible progress data type
@@ -114,6 +115,13 @@ pub struct FrontendTranscribeOptions {
     pub censored_words: Option<Vec<String>>,
     pub censor_style: Option<CensorStyle>,
     pub custom_prompt: Option<String>,
+    /// Customer-profile rules (word replacements, timing).
+    pub rules: Option<SubtitleRules>,
+    /// Double proof: second model that re-listens and checks spelling.
+    pub proof_model: Option<String>,
+    pub proof_model_path: Option<String>,
+    /// "confidence" (default), "proof" or "report".
+    pub proof_policy: Option<String>,
     // Optional pre-resolved model paths (filled by ensure_models command).
     pub asr_model_path: Option<String>,
     pub vad_model_path: Option<String>,
@@ -425,7 +433,7 @@ pub async fn transcribe_audio<R: Runtime>(
         // when it supports the (source, target) pair; the engine layer falls
         // back to Google Translate post-pass when native isn't possible.
         if options.translate.unwrap_or(false) {
-            let target = options.target_language.unwrap_or_else(|| "en".to_string());
+            let target = options.target_language.clone().unwrap_or_else(|| "en".to_string());
             transcribe_options.translate_target = Some(target);
             transcribe_options.use_native_translation = Some(true);
         } else {
@@ -519,13 +527,15 @@ pub async fn transcribe_audio<R: Runtime>(
             remove_punctuation: options.remove_punctuation.unwrap_or(false),
             censored_words: options.censored_words.clone().unwrap_or_default(),
             censor_style: options.censor_style.unwrap_or_default(),
+            rules: options.rules.clone().unwrap_or_default(),
         };
+        let content_formatting_for_proof = content_formatting.clone();
 
         // Run transcription.
         // `raw_segments` preserves the engine's pre-formatting word data (used as
         // `originalSegments` for reformatting). `segments` are fully formatted for display.
         tracing::info!("transcription pipeline started");
-        let (raw_segments, segments, output_language) = engine
+        let (mut raw_segments, mut segments, output_language) = engine
             .transcribe_audio(
                 &audio_path.to_string_lossy(),
                 transcribe_options,
@@ -557,6 +567,56 @@ pub async fn transcribe_audio<R: Runtime>(
         if let Ok(should_cancel) = SHOULD_CANCEL.lock() {
             if *should_cancel {
                 return Err("Transcription cancelled".to_string());
+            }
+        }
+
+        // Double proof: a second model re-listens to the same audio and votes
+        // on the spelling of each word. Model 1 keeps timings and speakers.
+        let mut proofread: Option<CrossCheckReport> = None;
+        let proof_model = options
+            .proof_model
+            .as_deref()
+            .map(str::trim)
+            .filter(|m| !m.is_empty() && *m != options.model.as_str() && !options.translate.unwrap_or(false))
+            .map(str::to_string);
+        if let Some(proof_model) = proof_model {
+            drop(engine);
+            let policy = CrossCheckPolicy::from_name(options.proof_policy.as_deref().unwrap_or("confidence"));
+            match run_proof_pass(&app, &options, &audio_path, &proof_model, &output_language).await {
+                Ok(proof_raw) => {
+                    let report = cross_check(&mut raw_segments, &proof_raw, policy, &proof_model);
+                    tracing::info!(
+                        "double proof with '{}': compared={} disagreements={} applied={}",
+                        proof_model,
+                        report.compared_words,
+                        report.changes.len(),
+                        report.applied_count()
+                    );
+                    if report.applied_count() > 0 {
+                        let pp_cfg = build_post_process_config(
+                            &output_language,
+                            options.density,
+                            options.max_lines,
+                            options.custom_max_chars_per_line,
+                            options.custom_max_words_per_line,
+                            Some(content_formatting_for_proof),
+                            &raw_segments,
+                        );
+                        segments = process_segments(&raw_segments, &pp_cfg);
+                    }
+                    proofread = Some(report);
+                }
+                Err(e) => {
+                    if SHOULD_CANCEL.lock().map(|c| *c).unwrap_or(false) {
+                        return Err("Transcription cancelled".to_string());
+                    }
+                    tracing::warn!("double proof with '{}' failed, keeping model 1 result: {}", proof_model, e);
+                    proofread = Some(CrossCheckReport {
+                        proof_model,
+                        error: Some(e),
+                        ..Default::default()
+                    });
+                }
             }
         }
 
@@ -599,6 +659,7 @@ pub async fn transcribe_audio<R: Runtime>(
             segments,
             original_segments: app_raw_segments,
             speakers,
+            proofread,
         })
     }
     .await;
@@ -637,6 +698,66 @@ pub async fn transcribe_audio<R: Runtime>(
             Err(e)
         }
     }
+}
+
+/// Second, plain transcription of the same audio for the double proof: no
+/// speakers, no forced alignment, no translation, no formatting. Only its raw
+/// words are used, so model 1 stays in charge of timing and structure.
+async fn run_proof_pass<R: Runtime>(
+    app: &AppHandle<R>,
+    options: &FrontendTranscribeOptions,
+    audio_path: &std::path::Path,
+    proof_model: &str,
+    output_language: &str,
+) -> Result<Vec<WDSegment>, String> {
+    let cache_dir = get_cache_dir(app.clone()).map_err(|e| format!("Failed to get cache directory: {e}"))?;
+    let mut engine = Engine::new(EngineConfig {
+        cache_dir,
+        enable_dtw: options.enable_dtw.or(Some(true)),
+        enable_flash_attn: Some(true),
+        use_gpu: options.enable_gpu.or(Some(true)),
+        gpu_device: None,
+        vad_model_path: options.vad_model_path.clone(),
+        diarize_segment_model_path: None,
+        diarize_embedding_model_path: None,
+        diarize_sortformer_model_path: None,
+        aligner_model_dir: None,
+        asr_model_path: options.proof_model_path.clone(),
+    });
+
+    let mut proof_options = TranscribeOptions::default();
+    proof_options.model = proof_model.to_string();
+    // Pin the language model 1 detected so both models hear the same language.
+    proof_options.lang = Some(if output_language.is_empty() { "auto".into() } else { output_language.to_string() });
+    proof_options.enable_vad = options.enable_vad.or(Some(true));
+    proof_options.enable_diarize = Some(false);
+    proof_options.enable_forced_alignment = Some(false);
+    proof_options.translate_target = None;
+    proof_options.use_native_translation = Some(false);
+    if let Some(prompt) = options.custom_prompt.as_deref().map(str::trim).filter(|p| !p.is_empty()) {
+        proof_options.advanced.get_or_insert_with(Default::default).init_prompt = Some(prompt.to_string());
+    }
+
+    // All of the second model's progress lands on one "Double proof" step.
+    let progress: Arc<LabeledProgressFn> = Arc::new(|percent: i32, _t: ProgressType, _label: &str| {
+        report_progress(percent.clamp(0, 99), ProgressType::Refine, "progressSteps.proofread");
+    });
+    let is_cancelled: Arc<dyn Fn() -> bool + Send + Sync> =
+        Arc::new(|| SHOULD_CANCEL.lock().map(|c| *c).unwrap_or(false));
+    let callbacks = Callbacks {
+        progress: Some(progress),
+        new_segment_callback: None,
+        speakers_identified: None,
+        is_cancelled: Some(is_cancelled),
+    };
+
+    report_progress(0, ProgressType::Refine, "progressSteps.proofread");
+    let (raw, _, _) = engine
+        .transcribe_audio(&audio_path.to_string_lossy(), proof_options, None, None, None, None, None, Some(callbacks))
+        .await
+        .map_err(|e| format!("{e:#}"))?;
+    report_progress(100, ProgressType::Refine, "progressSteps.proofread");
+    Ok(raw)
 }
 
 /// Always normalize audio to ensure it's mono 16kHz WAV for whisper-diarize-rs
@@ -794,6 +915,7 @@ pub struct FrontendFormattingOptions {
     pub remove_punctuation: Option<bool>,
     pub censored_words: Option<Vec<String>>,
     pub censor_style: Option<CensorStyle>,
+    pub rules: Option<SubtitleRules>,
 }
 
 /// Reformat subtitles with new formatting options without re-transcribing.
@@ -872,6 +994,9 @@ pub async fn reformat_subtitles(
     config.remove_punctuation = options.remove_punctuation.unwrap_or(false);
     config.censored_words = options.censored_words.clone().unwrap_or_default();
     config.censor_style = options.censor_style.unwrap_or_default();
+    if let Some(rules) = options.rules.as_ref() {
+        config.apply_rules(rules);
+    }
 
     // Run the formatting engine
     let formatted = process_segments(&engine_segments, &config);

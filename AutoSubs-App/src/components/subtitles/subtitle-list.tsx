@@ -4,7 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSubtitleDocument } from "@/contexts/SubtitleDocumentContext"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
-import { ArrowDown, ArrowUp, X } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, X } from "lucide-react"
+import type { ProofreadChange } from "@/types"
 import { useTranslation } from "react-i18next"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SpeakerSettings } from "@/components/common/speaker-settings"
@@ -45,7 +46,7 @@ const SubtitleList = ({
 }: SubtitleListProps) => {
     const { t } = useTranslation();
     const shortcutModifier = navigator.platform.startsWith("Mac") ? "⌘" : "Ctrl";
-    const { subtitles, updateSubtitles, currentSubtitleDocumentFilename, speakers, updateSpeakers } = useSubtitleDocument();
+    const { subtitles, updateSubtitles, currentSubtitleDocumentFilename, speakers, updateSpeakers, proofSuggestions, resolveProofSuggestion } = useSubtitleDocument();
     const [uncontrolledSelectedIndex, setUncontrolledSelectedIndex] = useState<number | null>(null);
     const selectedIndex = controlledSelectedIndex ?? uncontrolledSelectedIndex;
 
@@ -289,6 +290,44 @@ const SubtitleList = ({
 
     const handleMoveLastWordToNext = (index: number) => moveWord(index, "next");
 
+    // ── Double-proof suggestions ────────────────────────────────────────
+    // A suggestion belongs to the subtitle its word sits in (by time) and is
+    // shown only while that subtitle still contains the original spelling, so
+    // a manual fix makes it disappear on its own.
+    const wordPattern = (word: string) =>
+        new RegExp(`(^|[^\\p{L}\\p{N}])(${escapeRegExp(word)})(?=$|[^\\p{L}\\p{N}])`, "iu");
+
+    const suggestionsFor = (subtitle: { start: number; end: number; text?: string }) => {
+        if (!proofSuggestions.length) return [] as ProofreadChange[];
+        return proofSuggestions.filter((c) => {
+            const mid = (c.start + c.end) / 2;
+            return (
+                mid >= subtitle.start - 0.05 &&
+                mid <= subtitle.end + 0.05 &&
+                wordPattern(c.original).test(subtitle.text ?? "")
+            );
+        });
+    };
+
+    /** Apply a suggestion the same way a manual text edit does. */
+    const acceptSuggestion = (index: number, change: ProofreadChange) => {
+        const existing = subtitlesRef.current[index];
+        if (!existing) return;
+        const text = (existing.text ?? "").replace(
+            wordPattern(change.original),
+            (_m, before: string) => `${before}${change.proposed}`,
+        );
+        const next = [...subtitlesRef.current];
+        next[index] = { ...existing, text };
+        if (index === selectedIndex) {
+            showSubtitles(next, index);
+        } else {
+            subtitlesRef.current = next;
+            updateSubtitles(next);
+        }
+        void resolveProofSuggestion(change);
+    };
+
     const renderHighlightedText = (text: string, query: string) => {
         if (!query.trim() || !text) return text;
 
@@ -508,6 +547,41 @@ const SubtitleList = ({
                                                 {renderHighlightedText(subtitle.text ?? "", searchQuery)}
                                             </div>
                                         )}
+
+                                        {suggestionsFor(subtitle).map((change) => (
+                                            <div
+                                                key={`${change.start}-${change.original}`}
+                                                className="mt-2 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-dashed border-primary/40 bg-primary/5 px-2 py-1 text-xs"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <span className="text-muted-foreground">{t("proof.suggestion")}</span>
+                                                <span className="line-through opacity-70">{change.original}</span>
+                                                <span className="text-muted-foreground">→</span>
+                                                <span className="font-medium text-foreground">{change.proposed}</span>
+                                                <span className="ml-auto flex items-center gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 px-2 text-xs"
+                                                        onMouseDown={(e) => e.preventDefault()}
+                                                        onClick={() => acceptSuggestion(index, change)}
+                                                    >
+                                                        <Check className="size-3.5" />
+                                                        {t("proof.accept")}
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        title={t("proof.dismiss")}
+                                                        onMouseDown={(e) => e.preventDefault()}
+                                                        onClick={() => void resolveProofSuggestion(change)}
+                                                    >
+                                                        <X className="size-3.5" />
+                                                    </Button>
+                                                </span>
+                                            </div>
+                                        ))}
 
                                         {isSelected ? (
                                         <ButtonGroup className="mt-4">

@@ -330,6 +330,18 @@ fn attach_subtitle_data(payload: &mut serde_json::Value) -> Result<(), String> {
     let data: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
         format!("could not parse subtitle file {}: {}", file_path, e)
     })?;
+    let mut data = data;
+    // Customer-profile keywords are coloured by the caption macro; mark
+    // them here, where Unicode-aware matching is available.
+    let keywords: Vec<String> = payload
+        .get("keywords")
+        .and_then(|v| v.as_array())
+        .map(|a| a.iter().filter_map(|k| k.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    let marked = crate::keywords::mark_keywords(&mut data, &keywords);
+    if marked > 0 {
+        tracing::info!("marked {marked} keyword word(s) for colouring");
+    }
     payload["subtitleData"] = data;
     Ok(())
 }

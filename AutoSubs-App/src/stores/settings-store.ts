@@ -1,3 +1,4 @@
+import { BUILT_IN_PROFILES } from "@/presets/built-in-profiles";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { platform } from "@tauri-apps/plugin-os";
@@ -78,6 +79,19 @@ export const DEFAULT_SETTINGS: Settings = {
 
   // Caption style
   captionStyle: { source: "autosubs", presetId: DEFAULT_PRESET_ID },
+
+  // Output
+  outputTarget: "video",
+  safeZonePlatform: null,
+
+  // Double proof
+  proofModel: null,
+  proofPolicy: "confidence",
+
+  // Customer profiles
+  customerProfiles: [],
+  activeProfileId: null,
+  seededProfiles: [],
 };
 
 // ─── Persisted-shape normalisation ────────────────────────────────────────
@@ -94,6 +108,25 @@ export const DEFAULT_SETTINGS: Settings = {
  * must be idempotent: already-migrated settings pass straight through.
  */
 export function normalizePersistedSettings(persisted: unknown): Partial<Settings> {
+  return seedBuiltInProfiles(normalizeCaptionStyle(persisted));
+}
+
+/** Offer each built-in customer profile once; a deleted one is not re-added. */
+function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
+  const seeded = new Set(next.seededProfiles ?? []);
+  // Tipico red changed from #be1825 to #C8102E after the profile was first seeded.
+  const profiles = (next.customerProfiles ?? []).map((p) =>
+    p.id === "builtin:tipico" && p.keywordColor === "#be1825" ? { ...p, keywordColor: "#C8102E" } : p,
+  );
+  for (const profile of BUILT_IN_PROFILES) {
+    if (seeded.has(profile.id)) continue;
+    if (!profiles.some((p) => p.id === profile.id)) profiles.push(structuredClone(profile));
+    seeded.add(profile.id);
+  }
+  return { ...next, customerProfiles: profiles, seededProfiles: [...seeded] };
+}
+
+function normalizeCaptionStyle(persisted: unknown): Partial<Settings> {
   if (!persisted || typeof persisted !== "object") return {};
   const {
     captionMode,

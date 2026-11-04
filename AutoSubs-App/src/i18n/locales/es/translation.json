@@ -468,7 +468,8 @@
     "normaliseAudio": "Normalizando audio",
     "preparingAudio": "Preparando audio...",
     "processing": "Procesando",
-    "export": "Exportar"
+    "export": "Exportar",
+    "proofread": "Doble revisión (modelo 2)"
   },
   "subtitles": {
     "title": "Subtítulos",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "Elige un estilo",
     "speakerCount_one": "{{count}} hablante",
-    "speakerCount_other": "{{count}} hablantes"
+    "speakerCount_other": "{{count}} hablantes",
+    "target": {
+      "label": "Salida como",
+      "video": "Pista de vídeo (Fusion)",
+      "subtitle": "Pista de subtítulos (texto)",
+      "both": "Ambas"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "No se pudieron añadir los subtítulos a la línea de tiempo",
     "clipsBlocked": "No se pudieron colocar los subtítulos en la pista de salida. Prueba 'Add to New Track'.",
     "reformatFailed": "Error al reformatear"
+  },
+  "profiles": {
+    "rowLabel": "Cliente",
+    "none": "Sin perfil",
+    "new": "Nuevo perfil",
+    "edit": "Editar perfil",
+    "unnamed": "Sin nombre",
+    "dialogDescription": "Estilo, grafías y tiempos para un cliente.",
+    "name": "Nombre",
+    "style": "Estilo de subtítulo",
+    "keepStyle": "Mantener estilo actual",
+    "keywords": "Términos resaltados",
+    "keywordsHelp": "Uno por línea, p. ej. jugadores y clubes. Siempre en este color.",
+    "replacements": "Grafías",
+    "replacementsHelp": "Una por línea: mal => bien. Vacío a la derecha borra la palabra.",
+    "timing": "Tiempos (segundos)",
+    "timingHelp": "Vacío usa los valores por defecto.",
+    "minDuration": "Duración mín.",
+    "maxDuration": "Duración máx.",
+    "pauseSplit": "Pausa separa",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "keywordColor": "Color de términos"
+  },
+  "proof": {
+    "rowLabel": "Doble revisión",
+    "off": "Desactivado",
+    "policy": {
+      "confidence": "Gana el más seguro",
+      "proof": "Gana el modelo 2",
+      "report": "Solo informar"
+    },
+    "notWithTranslate": "No disponible al traducir.",
+    "sameModel": "Elige un modelo distinto al de arriba.",
+    "toast": {
+      "failed": "La doble revisión falló, se mantiene el modelo 1.",
+      "done": "Doble revisión: {{applied}} palabras corregidas ({{compared}} revisadas)",
+      "open": "{{count}} diferencias no aplicadas"
+    },
+    "suggestion": "Sugerencia:",
+    "accept": "Aplicar",
+    "dismiss": "Descartar"
+  },
+  "safeZone": {
+    "label": "Plataforma / zona segura",
+    "none": "Ninguna",
+    "position": "Borde inferior a unos {{y}} px desde abajo ({{percent}} %), timeline {{width}}×{{height}}.",
+    "noResolution": "Leyendo resolución…",
+    "mismatch": "La timeline no es {{aspect}}.",
+    "show": "Mostrar guía",
+    "hide": "Quitar guía",
+    "added": "Guía en la pista superior",
+    "removeHint": "Quítala antes de exportar.",
+    "partial": "La guía no cubre toda la timeline.",
+    "removed": "Guía eliminada",
+    "failed": "Error de zona segura"
   }
 }

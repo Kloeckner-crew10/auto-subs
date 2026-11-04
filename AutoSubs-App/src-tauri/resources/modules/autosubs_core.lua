@@ -1815,6 +1815,142 @@ end
 -- conflictMode: "replace" (delete existing), "skip" (write around conflicts), "new_track" (use new track), nil (default/old behavior)
 -- presetSettings: optional opaque table of AutoSubs Caption macro input values
 -- (captured via OpenPresetEdit/SavePresetEdit). Ignored for non-animated templates.
+-- ── Safe-zone overlay ─────────────────────────────────────────────────────
+-- A guide image (PNG the app draws at the timeline's resolution) on its own
+-- named top video track, so the editor sees where platform UI covers the
+-- frame. It is a guide only: remove it (or disable the track) before export.
+local SAFE_ZONE_TRACK = "AutoSubs Safe Zone"
+
+local function find_named_video_track(timeline, name)
+    for i = 1, (timeline:GetTrackCount("video") or 0) do
+        if timeline:GetTrackName("video", i) == name then
+            return i
+        end
+    end
+    return nil
+end
+
+function GetTimelineResolution()
+    refresh_project()
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then
+        return make_error("No timeline", "No active timeline in Resolve")
+    end
+    return {
+        width = tonumber(timeline:GetSetting("timelineResolutionWidth")),
+        height = tonumber(timeline:GetSetting("timelineResolutionHeight")),
+    }
+end
+
+function RemoveSafeZoneOverlay()
+    refresh_project()
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then
+        return make_error("No timeline", "No active timeline in Resolve")
+    end
+    local idx = find_named_video_track(timeline, SAFE_ZONE_TRACK)
+    if not idx then
+        return { removed = false }
+    end
+    local items = timeline:GetItemListInTrack("video", idx) or {}
+    if #items > 0 then
+        timeline:DeleteClips(items)
+    end
+    timeline:DeleteTrack("video", idx)
+    return { removed = true }
+end
+
+function AddSafeZoneOverlay(req)
+    local pngPath = req.pngPath
+    if type(pngPath) ~= "string" or pngPath == "" or not bmd.fileexists(pngPath) then
+        return make_error("Failed to add safe zone", "Overlay image not found: " .. tostring(pngPath))
+    end
+    local removed = RemoveSafeZoneOverlay()
+    if removed and removed.error then
+        return removed
+    end
+    local timeline = project:GetCurrentTimeline()
+    resolve:OpenPage("edit")
+
+    timeline:AddTrack("video")
+    local idx = timeline:GetTrackCount("video")
+    timeline:SetTrackName("video", idx, SAFE_ZONE_TRACK)
+
+    local imported = mediaPool:ImportMedia({ pngPath })
+    local item = imported and imported[1]
+    if not item then
+        return make_error("Failed to add safe zone", "Resolve could not import the overlay image")
+    end
+
+    -- A still may come in shorter than the timeline (Resolve's default still
+    -- length), so lay copies end to end until the whole timeline is covered.
+    local startFrame = timeline:GetStartFrame()
+    local endFrame = timeline:GetEndFrame()
+    local pos = startFrame
+    for _ = 1, 500 do
+        if pos >= endFrame then break end
+        local appended = mediaPool:AppendToTimeline({ {
+            mediaPoolItem = item,
+            startFrame = 0,
+            endFrame = endFrame - pos - 1,
+            trackIndex = idx,
+            recordFrame = pos,
+        } })
+        local clip = appended and appended[1]
+        local duration = clip and clip:GetDuration() or 0
+        if duration <= 0 then break end
+        pos = pos + duration
+    end
+    if pos == startFrame then
+        return make_error("Failed to add safe zone", "Resolve did not place the overlay on the timeline")
+    end
+    return { trackIndex = idx, covered = pos >= endFrame }
+end
+
+--- Put plain-text subtitles on Resolve's own subtitle track (no Fusion).
+--- The app writes an SRT file (Lua cannot write files); Resolve imports it as
+--- a media pool item, and AppendToTimeline places it on a subtitle track.
+--- SRT times are relative to the timeline start, like transcript times.
+function AddSubtitleTrack(req)
+    refresh_project()
+    local srtPath = req.srtPath
+    if type(srtPath) ~= "string" or srtPath == "" then
+        return make_error("Failed to add subtitle track", "No SRT file was given")
+    end
+    if not bmd.fileexists(srtPath) then
+        return make_error("Failed to add subtitle track", "SRT file not found: " .. srtPath)
+    end
+
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then
+        return make_error("Failed to add subtitle track", "No active timeline in Resolve")
+    end
+    resolve:OpenPage("edit")
+
+    if (timeline:GetTrackCount("subtitle") or 0) == 0 then
+        timeline:AddTrack("subtitle")
+    end
+
+    local imported = mediaPool:ImportMedia({ srtPath })
+    local item = imported and imported[1]
+    if not item then
+        return make_error("Failed to add subtitle track", "Resolve could not import the SRT file")
+    end
+
+    local appended = mediaPool:AppendToTimeline({ {
+        mediaPoolItem = item,
+        recordFrame = timeline:GetStartFrame(),
+    } })
+    if not appended or #appended == 0 then
+        appended = mediaPool:AppendToTimeline({ item })
+    end
+    if not appended or #appended == 0 then
+        return make_error("Failed to add subtitle track", "Resolve did not place the subtitles on the timeline")
+    end
+
+    return { message = "Subtitle track added", count = #appended }
+end
+
 function AddSubtitles(req)
     local filePath, trackIndex, templateName = req.filePath, req.trackIndex, req.templateName
     local conflictMode, presetSettings = req.conflictMode, req.presetSettings
@@ -2798,6 +2934,11 @@ local handlers = {
         JumpToTime(req.seconds)
         return { message = "Jumped to time" }
     end,
+
+    AddSubtitleTrack = function(req) return AddSubtitleTrack(req) end,
+    GetTimelineResolution = function() return GetTimelineResolution() end,
+    AddSafeZoneOverlay = function(req) return AddSafeZoneOverlay(req) end,
+    RemoveSafeZoneOverlay = function() return RemoveSafeZoneOverlay() end,
 
     AddSubtitles = function(req)
         -- Kept nested under `result` for backwards compatibility with the

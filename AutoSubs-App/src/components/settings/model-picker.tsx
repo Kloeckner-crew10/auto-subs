@@ -226,7 +226,7 @@ export function ModelPicker({
                           {downloadingModel === model.value ? (
                             <div className="flex items-center gap-2">
                               <Progress value={downloadProgress} className="h-1 w-12" />
-                              <span className="text-xs text-blue-600 dark:text-blue-400">{t("modelStatus.downloadProgress", { progress: downloadProgress })}</span>
+                              <span className="text-xs text-primary">{t("modelStatus.downloadProgress", { progress: downloadProgress })}</span>
                             </div>
                           ) : (
                             <Tooltip>

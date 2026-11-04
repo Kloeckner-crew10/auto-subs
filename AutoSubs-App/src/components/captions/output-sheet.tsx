@@ -1,3 +1,6 @@
+import { SafeZoneSection } from "@/components/captions/safe-zone-section";
+import { useIntegration } from "@/contexts/IntegrationContext";
+import type { OutputTarget } from "@/types";
 import * as React from "react";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -63,6 +66,9 @@ export function OutputSheet({
 }: OutputSheetProps) {
   const { t } = useTranslation();
   const selectedOutputTrack = useSettingsStore((s) => s.selectedOutputTrack);
+  const outputTarget = useSettingsStore((s) => s.outputTarget);
+  const { selectedIntegration } = useIntegration();
+  const isResolveOutput = selectedIntegration === "davinci";
   const updateSetting = useSettingsStore((s) => s.updateSetting);
 
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -111,7 +117,32 @@ export function OutputSheet({
               </p>
             )}
 
-            {outputTracks.length > 0 && (
+            {isResolveOutput && (
+              <section className="space-y-1.5">
+                <Label className="pl-1 text-xs text-muted-foreground">
+                  {t("captions.target.label")}
+                </Label>
+                <Select
+                  value={outputTarget}
+                  onValueChange={(value) =>
+                    updateSetting("outputTarget", value as OutputTarget)
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="video">{t("captions.target.video")}</SelectItem>
+                    <SelectItem value="subtitle">{t("captions.target.subtitle")}</SelectItem>
+                    <SelectItem value="both">{t("captions.target.both")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </section>
+            )}
+
+            {isResolveOutput && <SafeZoneSection />}
+
+            {outputTracks.length > 0 && outputTarget !== "subtitle" && (
               <section ref={trackRef} className="space-y-1.5">
                 <Label className="pl-1 text-xs text-muted-foreground">
                   {t("captions.track.label")}

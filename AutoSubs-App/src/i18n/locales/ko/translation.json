@@ -421,7 +421,8 @@
     "translate": "{{language}}(으)로 번역 중",
     "normaliseAudio": "오디오 정규화 중",
     "preparingAudio": "오디오 준비 중...",
-    "export": "내보내기"
+    "export": "내보내기",
+    "proofread": "이중 검사 (모델 2)"
   },
   "settings": {
     "description": "AutoSubs 환경설정 및 옵션을 구성합니다.",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "자막 스타일 선택",
     "speakerCount_one": "화자 {{count}}명",
-    "speakerCount_other": "화자 {{count}}명"
+    "speakerCount_other": "화자 {{count}}명",
+    "target": {
+      "label": "출력 방식",
+      "video": "비디오 트랙 (Fusion)",
+      "subtitle": "자막 트랙 (텍스트)",
+      "both": "둘 다"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "자막을 타임라인에 추가할 수 없습니다",
     "clipsBlocked": "출력 트랙에 캡션을 배치할 수 없습니다. 'Add to New Track'을 시도해 보세요.",
     "reformatFailed": "서식 변경 실패"
+  },
+  "profiles": {
+    "rowLabel": "고객",
+    "none": "프로필 없음",
+    "new": "새 고객 프로필",
+    "edit": "프로필 편집",
+    "unnamed": "제목 없음",
+    "dialogDescription": "고객별 스타일, 표기, 타이밍.",
+    "name": "이름",
+    "style": "자막 스타일",
+    "keepStyle": "현재 스타일 유지",
+    "keywords": "강조할 단어",
+    "keywordsHelp": "한 줄에 하나씩 (선수, 클럽 등). 항상 이 색상으로 표시.",
+    "replacements": "표기 규칙",
+    "replacementsHelp": "한 줄에 하나: 틀림 => 맞음. 오른쪽이 비면 단어 삭제.",
+    "timing": "타이밍 (초)",
+    "timingHelp": "비워 두면 기본값 사용.",
+    "minDuration": "최소 길이",
+    "maxDuration": "최대 길이",
+    "pauseSplit": "쉼에서 분리",
+    "delete": "삭제",
+    "save": "저장",
+    "keywordColor": "단어 색상"
+  },
+  "proof": {
+    "rowLabel": "이중 검사",
+    "off": "끄기",
+    "policy": {
+      "confidence": "더 확실한 쪽",
+      "proof": "모델 2 우선",
+      "report": "보고만"
+    },
+    "notWithTranslate": "번역 중에는 사용할 수 없습니다.",
+    "sameModel": "위와 다른 모델을 선택하세요.",
+    "toast": {
+      "failed": "이중 검사 실패, 모델 1 결과를 유지합니다.",
+      "done": "이중 검사: {{applied}}개 단어 수정 ({{compared}}개 확인)",
+      "open": "{{count}}개 차이 미적용"
+    },
+    "suggestion": "제안:",
+    "accept": "적용",
+    "dismiss": "무시"
+  },
+  "safeZone": {
+    "label": "플랫폼 / 세이프 존",
+    "none": "없음",
+    "position": "자막 아래쪽은 아래에서 약 {{y}}px ({{percent}}%), 타임라인 {{width}}×{{height}}.",
+    "noResolution": "해상도 읽는 중…",
+    "mismatch": "타임라인이 {{aspect}}가 아닙니다.",
+    "show": "가이드 표시",
+    "hide": "가이드 제거",
+    "added": "세이프 존 가이드를 맨 위 트랙에 추가",
+    "removeHint": "내보내기 전에 제거하세요.",
+    "partial": "가이드가 타임라인 전체를 덮지 않습니다.",
+    "removed": "가이드 제거됨",
+    "failed": "세이프 존 실패"
   }
 }

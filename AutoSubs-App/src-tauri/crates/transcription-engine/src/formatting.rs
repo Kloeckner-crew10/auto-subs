@@ -8,7 +8,7 @@
 // emitted as standalone tokens; both forms are normalized here.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use crate::types::{WordTimestamp, Segment};
 use unicode_segmentation::UnicodeSegmentation;
 use once_cell::sync::Lazy;
@@ -120,6 +120,42 @@ pub struct PostProcessConfig {
     /// Max words per rendered line (Custom density "words" unit). `None` = char limit only.
     #[serde(default)]
     pub max_words_per_line: Option<usize>,
+    /// Customer-profile word rules: whole-word, case-insensitive. An empty
+    /// `to` removes the word (filler words such as "ähm").
+    #[serde(default)]
+    pub replacements: Vec<WordReplacement>,
+    /// Multi-word customer keywords that must never be split by a line or
+    /// cue break ("Bayern München").
+    #[serde(default)]
+    pub keep_together: Vec<String>,
+}
+
+/// One whole-word rule from a customer profile.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct WordReplacement {
+    pub from: String,
+    pub to: String,
+}
+
+/// Rules a customer profile layers on top of the language preset. Every
+/// field is optional so an empty profile changes nothing.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SubtitleRules {
+    #[serde(default)]
+    pub replacements: Vec<WordReplacement>,
+    /// Customer keywords (players, clubs); multi-word ones are kept together.
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    /// Minimum time a subtitle stays on screen, in seconds.
+    #[serde(default)]
+    pub min_duration_sec: Option<f64>,
+    /// A subtitle longer than this is split, in seconds.
+    #[serde(default)]
+    pub max_duration_sec: Option<f64>,
+    /// A pause at least this long starts a new subtitle, in seconds.
+    #[serde(default)]
+    pub pause_split_sec: Option<f64>,
 }
 
 impl Default for PostProcessConfig {
@@ -138,11 +174,38 @@ impl Default for PostProcessConfig {
             censored_words: Vec::new(),
             censor_style: CensorStyle::default(),
             max_words_per_line: None,
+            replacements: Vec::new(),
+            keep_together: Vec::new(),
         }
     }
 }
 
 impl PostProcessConfig {
+    /// Layer customer-profile rules over the current config. Timing values
+    /// are clamped to sane ranges so a typo in a profile cannot produce
+    /// zero-length or endless subtitles.
+    pub fn apply_rules(&mut self, rules: &SubtitleRules) {
+        self.replacements = rules
+            .replacements
+            .iter()
+            .filter(|r| !r.from.trim().is_empty())
+            .cloned()
+            .collect();
+        self.keep_together = rules.keywords.clone();
+        if let Some(v) = rules.min_duration_sec.filter(|v| v.is_finite()) {
+            self.min_sub_dur = v.clamp(0.0, 10.0);
+        }
+        if let Some(v) = rules.max_duration_sec.filter(|v| v.is_finite()) {
+            self.max_sub_dur = v.clamp(0.5, 30.0);
+        }
+        if self.max_sub_dur < self.min_sub_dur {
+            self.max_sub_dur = self.min_sub_dur.max(0.5);
+        }
+        if let Some(v) = rules.pause_split_sec.filter(|v| v.is_finite()) {
+            self.split_gap_sec = v.clamp(0.05, 10.0);
+        }
+    }
+
     /// Build a config from a ScriptProfile preset.
     pub fn with_profile(p: ScriptProfile) -> Self {
         let mut cfg = Self::default();
@@ -440,6 +503,24 @@ pub fn process_segments(
     // 4) Repair invalid timestamps without changing recognized word identity.
     sanitize_word_times(&mut toks);
 
+    // 4b) Customer-profile word rules. Removals run before grouping so the
+    //     pause and duration splits see the cleaned word stream.
+    let replacement_map = build_replacement_map(&cfg.replacements);
+    if replacement_map.values().any(|to| to.is_empty()) {
+        toks.retain(|t| {
+            let key = strip_punct_chars(&t.word).trim().to_lowercase();
+            key.is_empty() || replacement_map.get(&key).map_or(true, |to| !to.is_empty())
+        });
+        if toks.is_empty() { return Vec::new(); }
+    }
+    if !replacement_map.is_empty() {
+        for t in &mut toks {
+            apply_replacement(t, &replacement_map);
+        }
+    }
+    // 4c) Keep multi-word customer keywords on one line and in one cue.
+    toks = join_keyword_phrases(toks, &cfg.keep_together);
+
     let censor_set = build_censor_set(&cfg.censored_words);
 
     // Fast path: single-word mode emits one cue per normalized word.
@@ -637,7 +718,89 @@ fn titlecase_latin(s: &str) -> String {
 
 /// Apply content formatting to a single token in place:
 /// 1) censor (if core word matches), 2) strip punctuation, 3) case transform.
-fn apply_content_formatting(t: &mut Tok, cfg: &PostProcessConfig, censor_set: &HashSet<String>) {
+fn build_replacement_map(rules: &[WordReplacement]) -> HashMap<String, String> {
+    rules
+        .iter()
+        .map(|r| (strip_punct_chars(&r.from).trim().to_lowercase(), r.to.trim().to_string()))
+        .filter(|(from, _)| !from.is_empty())
+        .collect()
+}
+
+/// Customer-profile spelling: swap the word core, keep its punctuation.
+fn apply_replacement(t: &mut Tok, replacements: &HashMap<String, String>) {
+    let clean = strip_punct_chars(&t.word);
+    let clean_trim = clean.trim();
+    if let Some(to) = replacements.get(&clean_trim.to_lowercase()).filter(|to| !to.is_empty()) {
+        t.word = match t.word.find(clean_trim) {
+            Some(idx) if !clean_trim.is_empty() => format!(
+                "{}{}{}",
+                &t.word[..idx],
+                to,
+                &t.word[idx + clean_trim.len()..]
+            ),
+            _ => to.clone(),
+        };
+    }
+}
+
+/// Customer keywords of more than one word ("Bayern München") become one
+/// token, so neither a line break nor a cue break can ever split them. A
+/// phrase only joins across plain spaces: a comma inside ends it, and so do
+/// a speaker change or an utterance break.
+fn join_keyword_phrases(toks: Vec<Tok>, keywords: &[String]) -> Vec<Tok> {
+    let norm = |w: &str| strip_punct_chars(w).trim().to_lowercase();
+    let mut phrases: Vec<Vec<String>> = keywords
+        .iter()
+        .map(|k| k.split_whitespace().map(norm).filter(|w| !w.is_empty()).collect::<Vec<_>>())
+        .filter(|p: &Vec<String>| p.len() > 1)
+        .collect();
+    if phrases.is_empty() {
+        return toks;
+    }
+    phrases.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    let keys: Vec<String> = toks.iter().map(|t| norm(&t.word)).collect();
+    let mut out: Vec<Tok> = Vec::with_capacity(toks.len());
+    let mut i = 0;
+    while i < toks.len() {
+        let joinable = |p: &Vec<String>| {
+            i + p.len() <= toks.len()
+                && p.iter().enumerate().all(|(k, w)| keys[i + k] == *w)
+                && (i..i + p.len() - 1).all(|j| toks[j].punc.is_empty())
+                && (i + 1..i + p.len()).all(|j| toks[j].speaker == toks[i].speaker && !toks[j].segment_break)
+        };
+        match phrases.iter().find(|p| joinable(p)) {
+            Some(p) => {
+                let n = p.len();
+                let mut merged = toks[i].clone();
+                for t in &toks[i + 1..i + n] {
+                    merged.word.push(' ');
+                    merged.word.push_str(&t.word);
+                }
+                let last = &toks[i + n - 1];
+                merged.punc = last.punc.clone();
+                merged.end = last.end;
+                merged.prob = toks[i..i + n]
+                    .iter()
+                    .filter_map(|t| t.prob)
+                    .reduce(f32::min);
+                out.push(merged);
+                i += n;
+            }
+            None => {
+                out.push(toks[i].clone());
+                i += 1;
+            }
+        }
+    }
+    out
+}
+
+fn apply_content_formatting(
+    t: &mut Tok,
+    cfg: &PostProcessConfig,
+    censor_set: &HashSet<String>,
+) {
     // 1) Censor: check if the cleaned word (punctuation stripped, lowercased) is in the set.
     if !censor_set.is_empty() {
         let clean = strip_punct_chars(&t.word);
@@ -2052,5 +2215,70 @@ mod tests {
         assert!(cues[0].words.as_ref().unwrap().iter().all(|word| {
             word.start <= word.end && word.end <= cues[0].end
         }));
+    }
+
+    fn contiguous(text: &str, word_dur: f64) -> Segment {
+        let words: Vec<WordTimestamp> = text
+            .split_whitespace()
+            .enumerate()
+            .map(|(i, w)| WordTimestamp {
+                text: if i == 0 { w.to_string() } else { format!(" {w}") },
+                start: i as f64 * word_dur,
+                end: (i + 1) as f64 * word_dur,
+                probability: None,
+            })
+            .collect();
+        let end = words.last().map(|w| w.end).unwrap_or(0.0);
+        Segment { start: 0.0, end, text: text.into(), words: Some(words), speaker_id: None }
+    }
+
+    fn joined(cues: &[Segment]) -> String {
+        cues.iter().map(|c| c.text.trim()).collect::<Vec<_>>().join(" | ")
+    }
+
+    #[test]
+    fn profile_replacements_fix_spelling_and_drop_fillers() {
+        let mut cfg = PostProcessConfig::for_language("de");
+        cfg.apply_rules(&SubtitleRules {
+            replacements: vec![
+                WordReplacement { from: "tipiko".into(), to: "Tipico".into() },
+                WordReplacement { from: "ähm".into(), to: "".into() },
+            ],
+            ..Default::default()
+        });
+        let cues = process_segments(&[contiguous("Willkommen ähm bei tipiko, Leute", 0.3)], &cfg);
+        assert_eq!(joined(&cues), "Willkommen bei Tipico, Leute");
+        assert!(cues.iter().flat_map(|c| c.words.clone().unwrap()).all(|w| !w.text.contains("ähm")));
+    }
+
+    #[test]
+    fn profile_timing_rules_control_splits() {
+        let seg = contiguous("eins zwei drei vier fünf sechs", 0.5);
+        let mut cfg = PostProcessConfig::for_language("de");
+        cfg.max_chars_per_line = 200;
+        cfg.apply_rules(&SubtitleRules { max_duration_sec: Some(1.0), ..Default::default() });
+        let cues = process_segments(&[seg.clone()], &cfg);
+        assert!(cues.len() >= 3, "max duration 1s should split 3s of speech: {}", joined(&cues));
+
+        let mut cfg = PostProcessConfig::for_language("de");
+        cfg.max_chars_per_line = 200;
+        cfg.apply_rules(&SubtitleRules { min_duration_sec: Some(0.0), max_duration_sec: Some(0.1), ..Default::default() });
+        assert!(cfg.max_sub_dur >= 0.5, "max duration is clamped");
+    }
+
+    #[test]
+    fn keyword_phrases_are_never_split() {
+        let mut cfg = PostProcessConfig::for_language("de");
+        cfg.max_chars_per_line = 12;
+        cfg.apply_rules(&SubtitleRules {
+            keywords: vec!["Bayern München".into(), "Lennart Karl".into()],
+            replacements: vec![WordReplacement { from: "Bayan".into(), to: "Bayern".into() }],
+            ..Default::default()
+        });
+        let cues = process_segments(&[contiguous("Karl spielt bei Bayan München und Lennart Karl auch", 0.3)], &cfg);
+        let lines: Vec<String> = cues.iter().flat_map(|c| c.text.lines().map(|l| l.trim().to_string()).collect::<Vec<_>>()).collect();
+        assert!(lines.iter().any(|l| l.contains("Bayern München")), "{lines:?}");
+        assert!(lines.iter().any(|l| l.contains("Lennart Karl")), "{lines:?}");
+        assert!(!lines.iter().any(|l| l.ends_with("Bayern") || l.ends_with("Lennart")), "{lines:?}");
     }
 }

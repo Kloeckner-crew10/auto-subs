@@ -468,7 +468,8 @@
     "normaliseAudio": "Audio wird normalisiert",
     "preparingAudio": "Audio wird vorbereitet...",
     "processing": "Verarbeite",
-    "export": "Export"
+    "export": "Export",
+    "proofread": "Double Proof (Modell 2)"
   },
   "subtitles": {
     "title": "Untertitel",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "Untertitelstil wählen",
     "speakerCount_one": "{{count}} Sprecher",
-    "speakerCount_other": "{{count}} Sprecher"
+    "speakerCount_other": "{{count}} Sprecher",
+    "target": {
+      "label": "Ausgabe als",
+      "video": "Video-Spur (Fusion-Untertitel)",
+      "subtitle": "Untertitelspur (nur Text)",
+      "both": "Beides"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "Untertitel konnten nicht zur Timeline hinzugefügt werden",
     "clipsBlocked": "Untertitel konnten nicht auf der Ausgabespur platziert werden. 'Add to New Track' wählen.",
     "reformatFailed": "Formatfehler"
+  },
+  "profiles": {
+    "rowLabel": "Kunde",
+    "none": "Kein Profil",
+    "new": "Neues Kundenprofil",
+    "edit": "Profil bearbeiten",
+    "unnamed": "Unbenannt",
+    "dialogDescription": "Stil, Schreibweisen und Timing für einen Kunden.",
+    "name": "Name",
+    "style": "Untertitel-Stil",
+    "keepStyle": "Aktuellen Stil behalten",
+    "keywords": "Hervorgehobene Begriffe",
+    "keywordsHelp": "Ein Begriff pro Zeile, z. B. Spieler und Vereine. Immer komplett in dieser Farbe.",
+    "replacements": "Schreibweisen",
+    "replacementsHelp": "Pro Zeile: falsch => richtig. Leer rechts entfernt das Wort.",
+    "timing": "Timing (Sekunden)",
+    "timingHelp": "Leer lassen für Standardwerte.",
+    "minDuration": "Mindestdauer",
+    "maxDuration": "Maximaldauer",
+    "pauseSplit": "Pause trennt ab",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "keywordColor": "Farbe der Begriffe"
+  },
+  "proof": {
+    "rowLabel": "Double Proof",
+    "off": "Aus",
+    "policy": {
+      "confidence": "Sicherere gewinnt",
+      "proof": "Modell 2 gewinnt",
+      "report": "Nur melden"
+    },
+    "notWithTranslate": "Nicht beim Übersetzen verfügbar.",
+    "sameModel": "Wähle ein anderes Modell als oben.",
+    "toast": {
+      "failed": "Double Proof fehlgeschlagen, Ergebnis von Modell 1 bleibt.",
+      "done": "Double Proof: {{applied}} Wörter korrigiert ({{compared}} geprüft)",
+      "open": "{{count}} Abweichungen nicht übernommen"
+    },
+    "suggestion": "Vorschlag:",
+    "accept": "Übernehmen",
+    "dismiss": "Verwerfen"
+  },
+  "safeZone": {
+    "label": "Plattform / Safe Zone",
+    "none": "Keine",
+    "position": "Untertitel-Unterkante ca. {{y}} px von unten ({{percent}} %), Timeline {{width}}×{{height}}.",
+    "noResolution": "Auflösung der Timeline wird gelesen…",
+    "mismatch": "Die Timeline ist nicht im Format {{aspect}}.",
+    "show": "Raster einblenden",
+    "hide": "Raster entfernen",
+    "added": "Safe-Zone-Raster liegt auf der obersten Spur",
+    "removeHint": "Vor dem Export mit „Raster entfernen“ löschen.",
+    "partial": "Raster deckt nicht die ganze Timeline ab.",
+    "removed": "Safe-Zone-Raster entfernt",
+    "failed": "Safe Zone fehlgeschlagen"
   }
 }

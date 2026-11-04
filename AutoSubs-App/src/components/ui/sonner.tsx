@@ -20,6 +20,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          // Close button top-right instead of sonner's default top-left.
+          closeButton:
+            "!left-auto !right-0 !translate-x-[35%] !-translate-y-[35%]",
         },
       }}
       {...props}

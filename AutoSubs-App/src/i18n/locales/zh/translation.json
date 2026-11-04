@@ -468,7 +468,8 @@
     "normaliseAudio": "正在标准化音频",
     "preparingAudio": "正在准备音频...",
     "processing": "正在处理",
-    "export": "导出"
+    "export": "导出",
+    "proofread": "双重校对（模型 2）"
   },
   "subtitles": {
     "title": "字幕",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "选择字幕样式",
     "speakerCount_one": "{{count}} 位说话人",
-    "speakerCount_other": "{{count}} 位说话人"
+    "speakerCount_other": "{{count}} 位说话人",
+    "target": {
+      "label": "输出为",
+      "video": "视频轨道（Fusion）",
+      "subtitle": "字幕轨道（纯文本）",
+      "both": "两者"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "无法将字幕添加到时间线",
     "clipsBlocked": "无法在输出轨道上放置字幕。请尝试“Add to New Track”。",
     "reformatFailed": "重新排版失败"
+  },
+  "profiles": {
+    "rowLabel": "客户",
+    "none": "无配置",
+    "new": "新建客户配置",
+    "edit": "编辑配置",
+    "unnamed": "未命名",
+    "dialogDescription": "单个客户的样式、拼写和时间设置。",
+    "name": "名称",
+    "style": "字幕样式",
+    "keepStyle": "保留当前样式",
+    "keywords": "高亮词语",
+    "keywordsHelp": "每行一个，例如球员和俱乐部。始终以此颜色显示。",
+    "replacements": "拼写规则",
+    "replacementsHelp": "每行一条：错误 => 正确。右侧为空则删除该词。",
+    "timing": "时间（秒）",
+    "timingHelp": "留空使用默认值。",
+    "minDuration": "最短时长",
+    "maxDuration": "最长时长",
+    "pauseSplit": "停顿分段",
+    "delete": "删除",
+    "save": "保存",
+    "keywordColor": "词语颜色"
+  },
+  "proof": {
+    "rowLabel": "双重校对",
+    "off": "关闭",
+    "policy": {
+      "confidence": "更确定的胜出",
+      "proof": "模型 2 优先",
+      "report": "仅报告"
+    },
+    "notWithTranslate": "翻译时不可用。",
+    "sameModel": "请选择与上方不同的模型。",
+    "toast": {
+      "failed": "双重校对失败，保留模型 1 的结果。",
+      "done": "双重校对：已修正 {{applied}} 个词（检查 {{compared}} 个）",
+      "open": "{{count}} 处差异未采用"
+    },
+    "suggestion": "建议：",
+    "accept": "采用",
+    "dismiss": "忽略"
+  },
+  "safeZone": {
+    "label": "平台 / 安全区",
+    "none": "无",
+    "position": "字幕底边约距底部 {{y}} px（{{percent}}%），时间线 {{width}}×{{height}}。",
+    "noResolution": "正在读取分辨率…",
+    "mismatch": "时间线不是 {{aspect}}。",
+    "show": "显示参考线",
+    "hide": "移除参考线",
+    "added": "安全区参考线已放在最上层轨道",
+    "removeHint": "导出前请移除。",
+    "partial": "参考线未覆盖整个时间线。",
+    "removed": "已移除参考线",
+    "failed": "安全区失败"
   }
 }

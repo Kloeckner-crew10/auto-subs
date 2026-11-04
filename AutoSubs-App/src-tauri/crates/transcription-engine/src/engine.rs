@@ -1,4 +1,4 @@
-use crate::formatting::{CensorStyle, PostProcessConfig, TextCase, TextDensity, process_segments};
+use crate::formatting::{CensorStyle, PostProcessConfig, SubtitleRules, TextCase, TextDensity, process_segments};
 use crate::post_process::vad_snap::{snap_timestamps_to_vad, extract_vad_intervals, VadSnapConfig};
 use crate::types::{Callbacks, DiarizeBackend, LabeledProgressFn, NewSegmentFn, Segment, SpeechSegment};
 use std::path::PathBuf;
@@ -12,6 +12,8 @@ pub struct ContentFormatting {
     pub remove_punctuation: bool,
     pub censored_words: Vec<String>,
     pub censor_style: CensorStyle,
+    /// Customer-profile rules (word replacements, timing).
+    pub rules: SubtitleRules,
 }
 
 use crate::manifest::{self, Engine as ModelEngine};
@@ -345,7 +347,7 @@ fn align_segments(
     Ok(())
 }
 
-fn build_post_process_config(
+pub fn build_post_process_config(
     output_lang: &str,
     density: Option<TextDensity>,
     max_lines: Option<usize>,
@@ -379,6 +381,7 @@ fn build_post_process_config(
         pp_cfg.remove_punctuation = cf.remove_punctuation;
         pp_cfg.censored_words = cf.censored_words;
         pp_cfg.censor_style = cf.censor_style;
+        pp_cfg.apply_rules(&cf.rules);
     }
 
     pp_cfg

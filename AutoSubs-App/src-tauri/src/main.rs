@@ -29,6 +29,7 @@ mod transcription_api;
 mod transcript_types;
 mod logging;
 mod resolve_bridge;
+mod keywords;
 mod resolve_scripts;
 mod resolve_launcher;
 mod adobe_bridge;

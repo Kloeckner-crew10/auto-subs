@@ -183,6 +183,72 @@ export interface Settings {
 
     // Caption style: which of the two kinds of caption to send, and which one.
     captionStyle: CaptionStyle;
+
+    /** What "Send to timeline" puts down: Fusion captions, Resolve's subtitle track, or both. */
+    outputTarget: OutputTarget;
+    /** Platform whose safe zone the send panel shows; null = none. */
+    safeZonePlatform: string | null;
+
+    // Double proof: a second model re-listens and votes on spelling.
+    proofModel: number | null; // index into the models array, null = off
+    proofPolicy: ProofPolicy;
+
+    // Customer profiles (style + word rules + timing per customer).
+    customerProfiles: CustomerProfile[];
+    activeProfileId: string | null;
+    /** Built-in profiles already offered once (so a deleted one stays deleted). */
+    seededProfiles: string[];
+}
+
+export type OutputTarget = "video" | "subtitle" | "both";
+
+/** "confidence": the surer model wins; "proof": model 2 always wins; "report": change nothing. */
+export type ProofPolicy = "confidence" | "proof" | "report";
+
+export interface WordReplacement {
+    from: string;
+    /** Empty removes the word (filler words). */
+    to: string;
+}
+
+/** Field names match Rust `SubtitleRules` (camelCase). */
+export interface SubtitleRules {
+    replacements: WordReplacement[];
+    /** Multi-word keywords are kept on one line and in one cue. */
+    keywords?: string[];
+    minDurationSec?: number | null;
+    maxDurationSec?: number | null;
+    pauseSplitSec?: number | null;
+}
+
+export interface CustomerProfile {
+    id: string;
+    name: string;
+    /** Caption preset this customer uses; null keeps the current style. */
+    presetId: string | null;
+    /** Players, clubs, brands: always drawn fully in `keywordColor`. */
+    keywords: string[];
+    /** Hex colour for keywords on Resolve's subtitle track, e.g. "#be1825". */
+    keywordColor?: string;
+    replacements: WordReplacement[];
+    minDurationSec: number | null;
+    maxDurationSec: number | null;
+    pauseSplitSec: number | null;
+}
+
+export interface ProofreadChange {
+    start: number;
+    end: number;
+    original: string;
+    proposed: string;
+    applied: boolean;
+}
+
+export interface ProofreadReport {
+    proofModel: string;
+    comparedWords: number;
+    changes: ProofreadChange[];
+    error?: string;
 }
 
 /**
@@ -252,6 +318,10 @@ export interface TranscriptionOptions {
     censoredWords: string[],
     censorStyle: CensorStyle,
     customPrompt?: string,
+    rules?: SubtitleRules,
+    proofModel?: string,
+    proofModelPath?: string,
+    proofPolicy?: ProofPolicy,
     // Pre-resolved model paths from ensure_models.
     asrModelPath?: string,
     vadModelPath?: string,
@@ -297,6 +367,7 @@ export interface FormattingOptions {
     removePunctuation?: boolean,
     censoredWords?: string[],
     censorStyle?: CensorStyle,
+    rules?: SubtitleRules,
 }
 
 // Segment format expected by the backend reformat command

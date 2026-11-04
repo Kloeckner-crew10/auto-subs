@@ -1,3 +1,5 @@
+import { colorKeywords } from "@/lib/keyword-markup";
+import { generateSrt } from "@/utils/srt-utils";
 // src/utils/fileUtils.ts
 import {
   join,
@@ -12,6 +14,7 @@ import {
   readTextFile,
   exists,
   writeTextFile,
+  writeFile,
   mkdir,
   stat,
   rename,
@@ -19,7 +22,7 @@ import {
   remove,
 } from "@tauri-apps/plugin-fs";
 import { platform } from "@tauri-apps/plugin-os";
-import { Subtitle, Speaker } from "@/types";
+import { Subtitle, Speaker, ProofreadChange } from "@/types";
 
 export { generateTranscriptTxt } from "./transcript-txt.ts";
 
@@ -48,6 +51,7 @@ interface TranscriptIndexItem {
 
 export interface StoredSubtitleDocument {
   filename: string;
+  proofSuggestions?: ProofreadChange[];
   createdAt: string;
   processingTime?: number;
   language?: string;
@@ -486,6 +490,31 @@ export async function validateExportedAudioFile(filePath: string): Promise<strin
   throw new Error(lastFailure);
 }
 
+/**
+ * Write the current subtitles as an SRT next to the subtitle document, for
+ * Resolve to import onto its own subtitle track. Returns the file path.
+ */
+export async function writeResolveSrt(
+  filename: string,
+  subtitles: Subtitle[],
+  keywords: string[] = [],
+  keywordColor = "#C8102E",
+): Promise<string> {
+  const dir = await getSubtitleDocumentsDir();
+  const base = filename.replace(/\.json$/i, "");
+  const path = await join(dir, `${base}.srt`);
+  await writeTextFile(path, generateSrt(colorKeywords(subtitles, keywords, keywordColor)));
+  return path;
+}
+
+/** Save the safe-zone guide image where Resolve can import it. */
+export async function writeSafeZonePng(name: string, bytes: Uint8Array): Promise<string> {
+  const dir = await getSubtitleDocumentsDir();
+  const path = await join(dir, name);
+  await writeFile(path, bytes);
+  return path;
+}
+
 export async function getSubtitleDocumentPath(filename: string): Promise<string> {
   const dir = await getSubtitleDocumentsDir();
   return await join(dir, filename);
@@ -755,6 +784,9 @@ export async function saveSubtitleDocument(
       speakers: speakers,
       originalSegments: originalSegments,
       segments: segments,
+      // Double proof: spellings model 2 proposed but that were not applied,
+      // shown as suggestions under the matching subtitle.
+      proofSuggestions: (transcript.proofread?.changes ?? []).filter((c: any) => !c.applied),
     };
 
     // Save transcript to file
@@ -788,12 +820,12 @@ export async function loadSubtitleDocumentSubtitles(
 // Update the transcript file for the specified timeline with new speakers or subtitles
 export async function updateSubtitleDocument(
   filename: string,
-  opts: { subtitles?: Subtitle[]; speakers?: Speaker[]; editedSegments?: Subtitle[] },
+  opts: { subtitles?: Subtitle[]; speakers?: Speaker[]; editedSegments?: Subtitle[]; proofSuggestions?: ProofreadChange[] },
 ) {
-  const { speakers, subtitles, editedSegments } = opts;
+  const { speakers, subtitles, editedSegments, proofSuggestions } = opts;
 
   // if no speakers or subtitles, do nothing
-  if (!speakers && !subtitles && !editedSegments) return;
+  if (!speakers && !subtitles && !editedSegments && !proofSuggestions) return;
 
   // read current file
   let transcript = await readSubtitleDocument(filename);
@@ -810,6 +842,9 @@ export async function updateSubtitleDocument(
   }
   if (editedSegments) {
     transcript.editedSegments = editedSegments;
+  }
+  if (proofSuggestions) {
+    transcript.proofSuggestions = proofSuggestions;
   }
 
   transcript.metadata = metadata;

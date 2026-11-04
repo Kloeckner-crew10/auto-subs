@@ -27,6 +27,8 @@ import type { Integration } from "@/contexts/IntegrationContext";
 import { LanguageButton } from "./language-button";
 import { FormatRow } from "./format-row";
 import { OptionsRow } from "./options-row";
+import { ProfileRow } from "./profile-row";
+import { ProofRow } from "./proof-row";
 import { isSupportedMediaFile, type ProcessingStep } from "./utils";
 
 export interface TranscriptionPanelViewProps {
@@ -290,6 +292,14 @@ export function TranscriptionPanelView({
                   <Card className="z-50 overflow-hidden rounded-2xl bg-background p-0 shadow-none">
                     <CompactSettingsRow
                       number={formatSectionNumber(2)}
+                      label={t("profiles.rowLabel")}
+                      className="border-b"
+                    >
+                      <ProfileRow />
+                    </CompactSettingsRow>
+
+                    <CompactSettingsRow
+                      number={formatSectionNumber(3)}
                       label={t("actionBar.language.title", "Language")}
                       className="border-b"
                     >
@@ -297,7 +307,7 @@ export function TranscriptionPanelView({
                     </CompactSettingsRow>
 
                     <CompactSettingsRow
-                      number={formatSectionNumber(3)}
+                      number={formatSectionNumber(4)}
                       label={t("actionBar.model", "Model")}
                       className="border-b"
                     >
@@ -316,7 +326,18 @@ export function TranscriptionPanelView({
                     </CompactSettingsRow>
 
                     <CompactSettingsRow
-                      number={formatSectionNumber(4)}
+                      number={formatSectionNumber(5)}
+                      label={t("proof.rowLabel")}
+                      className="border-b"
+                    >
+                      <ProofRow
+                        modelsState={modelsState}
+                        selectedModelIndex={selectedModelIndex}
+                      />
+                    </CompactSettingsRow>
+
+                    <CompactSettingsRow
+                      number={formatSectionNumber(6)}
                       label={t("actionBar.rows.format", "Format")}
                       alignTop={isCustomDensity}
                       className="border-b"
@@ -325,7 +346,7 @@ export function TranscriptionPanelView({
                     </CompactSettingsRow>
 
                     <CompactSettingsRow
-                      number={formatSectionNumber(5)}
+                      number={formatSectionNumber(7)}
                       label={t("actionBar.rows.options", "Options")}
                     >
                       <OptionsRow

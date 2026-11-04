@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { Subtitle, Speaker, Settings } from '@/types';
+import { Subtitle, Speaker, Settings, ProofreadChange } from '@/types';
 import { useResolve } from '@/contexts/ResolveContext';
 import { useAdobe } from '@/contexts/AdobeContext';
 import { useIntegration, type Integration } from '@/contexts/IntegrationContext';
+import { getActiveProfile, profileRules } from "@/lib/customer-profiles";
 import { getActiveCensorWords } from '@/censor/merge';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -53,6 +54,9 @@ function getTranscriptSourceType(
 }
 
 interface SubtitleDocumentContextType {
+  /** Spellings the double proof proposed but did not apply. */
+  proofSuggestions: ProofreadChange[];
+  resolveProofSuggestion: (change: ProofreadChange) => Promise<void>;
   subtitles: Subtitle[];
   speakers: Speaker[];
   markIn: number;
@@ -83,6 +87,7 @@ const SubtitleDocumentContext = createContext<SubtitleDocumentContextType | null
 export function SubtitleDocumentProvider({ children }: { children: React.ReactNode }) {
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
+  const [proofSuggestions, setProofSuggestions] = useState<ProofreadChange[]>([]);
   const [markIn, setMarkIn] = useState(0);
   const [currentSubtitleDocumentFilename, setCurrentSubtitleDocumentFilename] = useState<string | null>(null);
   const [currentSubtitleDocumentSourceName, setCurrentSubtitleDocumentSourceName] = useState<string | null>(null);
@@ -91,6 +96,8 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
   // Deliberately excludes `displayName`, which falls back to the generated
   // document filename and would surface an id like `example__tr_2026…`.
   const documentFilenameRef = useRef(currentSubtitleDocumentFilename);
+  const proofSuggestionsRef = useRef<ProofreadChange[]>([]);
+  proofSuggestionsRef.current = proofSuggestions;
   documentFilenameRef.current = currentSubtitleDocumentFilename;
 
   // Debounce subtitle file writes to prevent concurrent read-parse-stringify-write
@@ -122,12 +129,14 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
         setMarkIn(transcript.mark_in);
         setSubtitles(transcript.segments || []);
         setSpeakers(transcript.speakers || []);
+        setProofSuggestions(transcript.proofSuggestions || []);
         loadFontForLanguage(transcript.language);
       } else {
         console.warn("No transcript found for:", filename);
         setCurrentSubtitleDocumentFilename(null);
         setCurrentSubtitleDocumentSourceName(null);
         setSubtitles([]);
+        setProofSuggestions([]);
         setSpeakers([]);
       }
     } else {
@@ -135,6 +144,7 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
       setCurrentSubtitleDocumentFilename(null);
       setCurrentSubtitleDocumentSourceName(null);
       setSubtitles([]);
+      setProofSuggestions([]);
       setSpeakers([]);
     }
   }, []);
@@ -251,6 +261,7 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
     // Update the global subtitles state to show in sidebar
     setSpeakers(speakers)
     setSubtitles(segments)
+    setProofSuggestions((transcript?.proofread?.changes ?? []).filter((c: ProofreadChange) => !c.applied))
     console.log("Subtitle list updated with", segments.length, "subtitles")
 
     // Ensure the font for the detected transcription language is registered
@@ -303,6 +314,7 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
       removePunctuation: settings.removePunctuation,
       censoredWords: settings.enableCensor ? getActiveCensorWords(settings) : [],
       censorStyle: settings.censorStyle,
+      rules: profileRules(getActiveProfile(settings)),
     });
 
     // Save reformatted segments and update state.
@@ -460,6 +472,7 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
   const openStoredSubtitleDocument = (filename: string, transcript: any) => {
     setSubtitles(transcript?.segments || []);
     setSpeakers(transcript?.speakers || []);
+    setProofSuggestions(transcript?.proofSuggestions || []);
     setCurrentSubtitleDocumentFilename(filename);
     setCurrentSubtitleDocumentSourceName(subtitleDocumentSourceName(transcript));
     if (typeof transcript?.mark_in === "number") {
@@ -478,14 +491,28 @@ export function SubtitleDocumentProvider({ children }: { children: React.ReactNo
     }
     if (documentFilenameRef.current !== filename) return;
     setSubtitles([]);
+    setProofSuggestions([]);
     setSpeakers([]);
     setCurrentSubtitleDocumentFilename(null);
     setCurrentSubtitleDocumentSourceName(null);
     setMarkIn(0);
   };
 
+  /** Drop a suggestion (accepted or dismissed) and persist the shorter list. */
+  const resolveProofSuggestion = useCallback(async (change: ProofreadChange) => {
+    const next = proofSuggestionsRef.current.filter((c) => c !== change);
+    proofSuggestionsRef.current = next;
+    setProofSuggestions(next);
+    const filename = documentFilenameRef.current;
+    if (filename) {
+      await updateSubtitleDocument(filename, { proofSuggestions: next });
+    }
+  }, []);
+
   return (
     <SubtitleDocumentContext.Provider value={{
+      proofSuggestions,
+      resolveProofSuggestion,
       subtitles,
       speakers,
       markIn,

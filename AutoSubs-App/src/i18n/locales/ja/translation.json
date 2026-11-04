@@ -421,7 +421,8 @@
     "translate": "{{language}} に翻訳中",
     "normaliseAudio": "音声を正規化中",
     "preparingAudio": "音声を準備中...",
-    "export": "エクスポート"
+    "export": "エクスポート",
+    "proofread": "ダブルチェック（モデル2）"
   },
   "settings": {
     "description": "AutoSubs の設定とオプションを構成します。",
@@ -692,11 +693,73 @@
     },
     "chooseStyle": "スタイルを選択",
     "speakerCount_one": "話者 {{count}} 人",
-    "speakerCount_other": "話者 {{count}} 人"
+    "speakerCount_other": "話者 {{count}} 人",
+    "target": {
+      "label": "出力先",
+      "video": "ビデオトラック（Fusion）",
+      "subtitle": "字幕トラック（テキスト）",
+      "both": "両方"
+    }
   },
   "errorDialog": {
     "addToTimelineFailed": "字幕をタイムラインに追加できませんでした",
     "clipsBlocked": "出力トラックにキャプションを配置できませんでした。「Add to New Track」を試してください。",
     "reformatFailed": "再整形に失敗"
+  },
+  "profiles": {
+    "rowLabel": "顧客",
+    "none": "プロフィールなし",
+    "new": "新しい顧客プロフィール",
+    "edit": "プロフィールを編集",
+    "unnamed": "無題",
+    "dialogDescription": "顧客ごとのスタイル、表記、タイミング。",
+    "name": "名前",
+    "style": "字幕スタイル",
+    "keepStyle": "現在のスタイルを維持",
+    "keywords": "強調する語句",
+    "keywordsHelp": "1行に1語句（選手名やクラブ名など）。常にこの色で表示。",
+    "replacements": "表記ルール",
+    "replacementsHelp": "1行に1つ: 誤 => 正。右が空なら単語を削除。",
+    "timing": "タイミング（秒）",
+    "timingHelp": "空欄で既定値を使用。",
+    "minDuration": "最短表示",
+    "maxDuration": "最長表示",
+    "pauseSplit": "ポーズで分割",
+    "delete": "削除",
+    "save": "保存",
+    "keywordColor": "語句の色"
+  },
+  "proof": {
+    "rowLabel": "ダブルチェック",
+    "off": "オフ",
+    "policy": {
+      "confidence": "確信度が高い方",
+      "proof": "モデル2を優先",
+      "report": "報告のみ"
+    },
+    "notWithTranslate": "翻訳中は使用できません。",
+    "sameModel": "上とは別のモデルを選択してください。",
+    "toast": {
+      "failed": "ダブルチェックに失敗しました。モデル1の結果を使用します。",
+      "done": "ダブルチェック: {{applied}}語を修正（{{compared}}語を確認）",
+      "open": "{{count}}件の差異は未適用"
+    },
+    "suggestion": "候補:",
+    "accept": "適用",
+    "dismiss": "却下"
+  },
+  "safeZone": {
+    "label": "プラットフォーム / セーフゾーン",
+    "none": "なし",
+    "position": "字幕の下端は下から約{{y}}px（{{percent}}%）、タイムライン{{width}}×{{height}}。",
+    "noResolution": "解像度を取得中…",
+    "mismatch": "タイムラインが{{aspect}}ではありません。",
+    "show": "ガイドを表示",
+    "hide": "ガイドを削除",
+    "added": "セーフゾーンガイドを最上段に配置しました",
+    "removeHint": "書き出し前に削除してください。",
+    "partial": "ガイドがタイムライン全体を覆っていません。",
+    "removed": "ガイドを削除しました",
+    "failed": "セーフゾーンに失敗"
   }
 }

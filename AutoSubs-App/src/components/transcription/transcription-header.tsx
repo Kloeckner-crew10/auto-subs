@@ -81,7 +81,7 @@ function UpdateStatusIndicator({
         href="https://github.com/tmoroney/auto-subs/releases/latest"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900 dark:hover:text-blue-300"
+        className="flex h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-primary transition-colors hover:bg-primary/10"
       >
         <RotateCcw className="size-3 shrink-0" />
         <span className="truncate">

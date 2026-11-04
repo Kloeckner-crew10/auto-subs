@@ -66,5 +66,8 @@ pub struct Transcript {
     #[serde(rename = "originalSegments")]
     pub original_segments: Vec<Segment>,
     pub speakers: Vec<Speaker>,
+    /// Double-proof result when a second model checked the transcript.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proofread: Option<transcription_engine::CrossCheckReport>,
 }
 

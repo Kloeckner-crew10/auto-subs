@@ -30,6 +30,7 @@ const STEP_ORDER = [
   'translate',
   'refine',
   'finish',
+  'proofread',
 ] as const;
 
 /**
@@ -45,6 +46,7 @@ function predictedSteps(settings: ProgressSettings): string[] {
   if (settings.enableDiarize) steps.push('analyze.diarize');
   steps.push('analyze.loading', 'transcribe');
   if (settings.enableForcedAlignment) steps.push('refine');
+  if (settings.enableProofread) steps.push('proofread');
   steps.push('finish');
   return steps;
 }
@@ -66,6 +68,7 @@ interface ProgressSettings {
   enableForcedAlignment: boolean;
   enableDiarize: boolean;
   audioInputMode: 'file' | 'timeline';
+  enableProofread?: boolean;
 }
 
 interface ProgressContextType {

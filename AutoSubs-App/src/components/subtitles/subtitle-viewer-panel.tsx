@@ -30,13 +30,14 @@ import { useResolve } from "@/contexts/ResolveContext";
 import { useAdobe } from "@/contexts/AdobeContext";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { useSettingsStore } from "@/stores/settings-store";
+import { getActiveProfile, profileKeywords } from "@/lib/customer-profiles";
 import { useOutputPanelStore } from "@/stores/output-panel-store";
 import { useAudioPreview } from "@/contexts/AudioPreviewContext";
 import { useErrorDialog } from "@/contexts/ErrorDialogContext";
 import { describeError } from "@/components/transcription/utils";
-import { ResolveApiError } from "@/api/resolve-api";
+import { ResolveApiError, addSubtitleTrackToTimeline } from "@/api/resolve-api";
 import { useTranslation } from "react-i18next";
-import { type SubtitleDocumentListItem } from "@/utils/file-utils";
+import { type SubtitleDocumentListItem, writeResolveSrt } from "@/utils/file-utils";
 
 interface SubtitleViewerPanelProps {
   isOpen?: boolean;
@@ -516,12 +517,27 @@ export function SubtitleViewerPanel({
       await flushPendingSubtitleSave();
 
       setIsAddingToTimeline(true);
-      await pushToTimeline(
-        currentSubtitleDocumentFilename,
-        selectedTemplate,
-        selectedOutputTrack,
-        presetSettings,
-      );
+      // Resolve can take the captions as Fusion clips on a video track, as
+      // plain text on its own subtitle track, or both. Adobe: video only.
+      const target = isAdobeActive ? "video" : useSettingsStore.getState().outputTarget;
+      if (target !== "subtitle") {
+        await pushToTimeline(
+          currentSubtitleDocumentFilename,
+          selectedTemplate,
+          selectedOutputTrack,
+          presetSettings,
+        );
+      }
+      if (target !== "video") {
+        const profile = getActiveProfile(useSettingsStore.getState());
+        const srtPath = await writeResolveSrt(
+          currentSubtitleDocumentFilename,
+          subtitles,
+          profileKeywords(profile),
+          profile?.keywordColor,
+        );
+        await addSubtitleTrackToTimeline(srtPath);
+      }
       setJustSent(true);
     } catch (error) {
       console.error("Failed to add to timeline:", error);

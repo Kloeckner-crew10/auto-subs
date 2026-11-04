@@ -11,14 +11,16 @@ pub mod translation_pipeline;
 pub mod utils;
 pub mod formatting;
 pub mod post_process;
+pub mod cross_check;
 
 // Re-exports (crate users only need these)
-pub use engine::{Engine, EngineConfig, ContentFormatting};
+pub use engine::{build_post_process_config, Engine, EngineConfig, ContentFormatting};
 pub use vad::get_segments;
 pub use types::{Callbacks, DiarizeBackend, LabeledProgressFn, NewSegmentFn, SegmentStage, SpeakersIdentifiedFn, TranscribeOptions, Segment, WordTimestamp, ProgressType};
 pub use model_manager::ModelManager;
 pub use utils::{get_translate_languages, get_whisper_languages};
-pub use formatting::{CensorStyle, PostProcessConfig, process_segments, TextCase, TextDensity};
+pub use cross_check::{cross_check, CrossCheckChange, CrossCheckPolicy, CrossCheckReport};
+pub use formatting::{CensorStyle, PostProcessConfig, process_segments, SubtitleRules, TextCase, TextDensity, WordReplacement};
 
 /// Install whisper.cpp logging hooks so output is routed through Rust's tracing system
 /// instead of raw stderr, allowing filters to suppress chatty internal logs.

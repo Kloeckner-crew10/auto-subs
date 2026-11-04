@@ -25,6 +25,7 @@
 					-- Written by Lua server. Each entry: { startIndex, endIndex, startFrame, endFrame }
 					-- Indices are 0-based character positions; frames are relative to the subtitle's own start (frame 0), not the timeline.
 					-- endFrame is unused but kept for structural symmetry with startFrame.
+					-- Optional ["keyword"] = true marks a word drawn in the Keyword Color (absent = false).
 					-- Example — "Subtitle Example Text":
 					{ ["startIndex"] = 0,  ["endIndex"] = 7,  ["startFrame"] = 0,  ["endFrame"] = 10 },
 					{ ["startIndex"] = 8,  ["endIndex"] = 15, ["startFrame"] = 10, ["endFrame"] = 20 },
@@ -62,6 +63,10 @@
 					"ShadowColorBlue",
 					"HighlightStyle",
 					"HighlightEnabled",
+					"KeywordEnabled",
+					"KeywordColorRed",
+					"KeywordColorGreen",
+					"KeywordColorBlue",
 					"WrapEnabled",
 					"WrapBoxWidth"
 				},
@@ -117,6 +122,13 @@
 						if n > maxEndFrame then
 							local keep = math.max(1, maxEndFrame)
 							wordTiming[keep].endIndex = wordTiming[n].endIndex
+							-- The merged entry stays a keyword if any merged word was one.
+							for i = keep + 1, n do
+								local kw = wordTiming[i].keyword
+								if kw == true or kw == 1 then
+									wordTiming[keep].keyword = true
+								end
+							end
 							for i = n, keep + 1, -1 do
 								table.remove(wordTiming, i)
 							end
@@ -710,6 +722,10 @@
 							return count
 						end
 
+						-- Keyword flags are per word position; carry them over from the
+						-- current timing so marker edits don't drop keyword colouring.
+						local previousTiming = tool:GetData("WordTiming") or {}
+
 						-- Build intermediate word timing format
 						local wordTiming = {}
 						local count = math.min(#markerFrames, #words)
@@ -742,16 +758,20 @@
 								endFrame = math.min(endFrame, math.min(markerFrames[i + 1].frame + leadInFrames, maxFrame))
 							end
 						
+							local previous = previousTiming[i]
+							local isKeyword = previous ~= nil and (previous.keyword == true or previous.keyword == 1)
+
 							table.insert(wordTiming, {
 								["startIndex"] = charIndex,
 								["endIndex"] = charIndex + length - 1,
 								["startFrame"] = startFrame,
 								["endFrame"] = endFrame,
+								["keyword"] = isKeyword,
 							})
 
 							charIndex = charIndex + length
 						end
-						
+
 						-- Normalize the marker-derived timing so duplicate or out-of-range marker
 						-- positions don't collapse highlight states onto the same frame.
 						wordTiming = loadstring(tool:GetData("ScaleWordTiming"))()(comp, wordTiming, true)
@@ -847,11 +867,37 @@
 							return base
 						end
 
+						-- Keyword colouring: words flagged `keyword` in WordTiming are drawn in the
+						-- Keyword Color through the Fill style (style index 0), whatever the
+						-- highlight style is. The active word still wins when highlighting Fill.
+						local FILL_STYLE_ID = 0
+						local KEYWORD_CODES = { Red = 2401, Green = 2402, Blue = 2403 }
+						local keywordEnabled = tool:GetInput("KeywordEnabled") == 1
+						local keywordColor = {
+							Red = tool:GetInput("KeywordColorRed"),
+							Green = tool:GetInput("KeywordColorGreen"),
+							Blue = tool:GetInput("KeywordColorBlue"),
+						}
+						local function is_keyword(word)
+							return keywordEnabled and (word.keyword == true or word.keyword == 1)
+						end
+
 						-- Build a StyledText Array where word at `activeIndex` uses `highlight` colors and the rest use `base`
+						-- (or the keyword colour for keyword words)
 						local function build_style_array(wordTiming, activeIndex, highlight, base, styleId)
 							local array = {}
+							local keywordFill = {
+								Red = keywordColor.Red,
+								Green = keywordColor.Green,
+								Blue = keywordColor.Blue,
+								Enabled = base.Enabled
+							}
 							for j, word in ipairs(wordTiming) do
-								local style = j == activeIndex and highlight or base
+								local isActive = j == activeIndex
+								local style = isActive and highlight or base
+								if styleId == FILL_STYLE_ID and not isActive and is_keyword(word) then
+									style = keywordFill
+								end
 								for key, internalCode in pairs(INTERNAL_CODES) do
 									table.insert(array, {
 										internalCode,
@@ -861,6 +907,19 @@
 										__flags = 256,
 										Index = styleId
 									})
+								end
+								-- Highlight drawn on Outline/Shadow/Bubble: colour the keyword's fill separately.
+								if styleId ~= FILL_STYLE_ID and is_keyword(word) then
+									for key, internalCode in pairs(KEYWORD_CODES) do
+										table.insert(array, {
+											internalCode,
+											word.startIndex,
+											word.endIndex,
+											Value = keywordColor[key],
+											__flags = 256,
+											Index = FILL_STYLE_ID
+										})
+									end
 								end
 							end
 							return array
@@ -946,12 +1005,41 @@
 						local spline = characterLevelStyling.CharacterLevelStyling:GetConnectedOutput():GetTool()
 						loadstring(tool:GetData("UpdateAllStyleColors"))()(comp, tool)
 
+						-- Keyword words keep their Keyword Color (Fill style, index 0) without
+						-- the highlighter. No keywords (or Color Keywords off) leaves the array
+						-- empty, which uses default styling.
+						local styleArray = {}
+						if tool:GetInput("KeywordEnabled") == 1 then
+							local KEYWORD_CODES = { Red = 2401, Green = 2402, Blue = 2403 }
+							local keywordColor = {
+								Red = tool:GetInput("KeywordColorRed"),
+								Green = tool:GetInput("KeywordColorGreen"),
+								Blue = tool:GetInput("KeywordColorBlue"),
+							}
+							for _, word in ipairs(tool:GetData("WordTiming") or {}) do
+								if word.keyword == true or word.keyword == 1 then
+									for key, internalCode in pairs(KEYWORD_CODES) do
+										table.insert(styleArray, {
+											internalCode,
+											word.startIndex,
+											word.endIndex,
+											Value = keywordColor[key],
+											__flags = 256,
+											Index = 0
+										})
+									end
+								end
+							end
+						end
+						-- Lets UpdateHighlight know there is keyword styling to clear later.
+						tool:SetData("KeywordStyled", #styleArray > 0 and 1 or 0)
+
 						local keyframes = {
 							[0] = {
 						        0,                         -- index of keyframe in the array (0-based) - kinda random - why?
 						        Value = {
 						            __ctor = "StyledText", -- internal id to designate this as a StyledText object
-						            Array = {}, -- empty array uses default styling
+						            Array = styleArray, -- empty array uses default styling
 						            Flags = { StepIn = true, LockedY = true, __flags = 256 }
 						        },
 						    },
@@ -979,6 +1067,23 @@
 						local isEnabled = tool:GetInput("HighlightEnabled") == 1
 						if isEnabled then
     					    loadstring(tool:GetData("ApplyHighlight"))()(comp, tool)
+						else
+							-- Highlight off: keyword words still need their colour keyframe
+							-- (RemoveHighlight writes it). Skipped when there is nothing to
+							-- colour and nothing to clear, so captions without keywords
+							-- behave exactly as before.
+							local hasKeywords = false
+							if tool:GetInput("KeywordEnabled") == 1 then
+								for _, word in ipairs(tool:GetData("WordTiming") or {}) do
+									if word.keyword == true or word.keyword == 1 then
+										hasKeywords = true
+										break
+									end
+								end
+							end
+							if hasKeywords or tool:GetData("KeywordStyled") == 1 then
+								loadstring(tool:GetData("RemoveHighlight"))()(comp, tool)
+							end
 						end
 					end
 				]],
@@ -1415,6 +1520,92 @@
 							INP_Default = 0,
 							IC_ControlID = 2,
 							IC_ControlGroup = 23,
+							ICS_ControlPage = "Controls",
+							IC_Visible = true,
+							INP_External = false,
+							INP_Passive = false,
+						},
+						-- Keyword colouring: words the app flags as keywords (e.g. player or club
+						-- names) use KeywordColor via the Fill style. See ApplyHighlight/RemoveHighlight.
+						KeywordLabel = {
+							LINKS_Name = "Keywords",
+							INP_Integer = false,
+							LBLC_DropDownButton = true,
+							LBLC_NumInputs = 5,
+							INP_SplineType = "Default",
+							INP_Default = 1,
+							LINKID_DataType = "Number",
+							INP_Passive = true,
+							INPID_InputControl = "LabelControl",
+						},
+						KeywordEnabled = {
+							LINKS_Name = "Color Keywords",
+							INP_MaxAllowed = 1,
+							INP_Integer = false,
+							INPID_InputControl = "CheckboxControl",
+							CBC_TriState = false,
+							INP_SplineType = "Default",
+							INP_MaxScale = 1,
+							INP_Default = 1,
+							LINKID_DataType = "Number",
+							INP_MinScale = 0,
+							INP_External = false,
+							INP_Passive = false,
+							INP_MinAllowed = 0,
+							INPS_ExecuteOnChange = [[
+								local func = tool:GetData("ToggleHighlight")
+								if func then
+									loadstring(func)()(comp, tool)
+								end
+							]],
+						},
+						UpdateKeywordColor = {
+							LINKS_Name = "Update Keyword Color",
+							LINKID_DataType = "Number",
+							IC_NoLabel = false,
+							INPID_InputControl = "ButtonControl",
+							IC_Visible = true,
+							INP_Passive = true,
+							BTNCS_Execute = [[
+								loadstring(tool:GetData("UpdateHighlight"))()(comp, tool)
+							]],
+						},
+						KeywordColorRed = {
+							LINKS_Name = "Keyword Color",
+							INP_Integer = false,
+							CLRC_NoSliders = false,
+							CLRC_ShowWheel = true,
+							INPID_InputControl = "ColorControl",
+							LINKID_DataType = "Number",
+							INP_Default = 0.745098,
+							IC_ControlID = 0,
+							IC_ControlGroup = 24,
+							ICS_ControlPage = "Controls",
+							IC_Visible = true,
+							INP_External = false,
+							INP_Passive = false,
+						},
+						KeywordColorGreen = {
+							INP_Integer = false,
+							CLRC_NoSliders = false,
+							INPID_InputControl = "ColorControl",
+							LINKID_DataType = "Number",
+							INP_Default = 0.094118,
+							IC_ControlID = 1,
+							IC_ControlGroup = 24,
+							ICS_ControlPage = "Controls",
+							IC_Visible = true,
+							INP_External = false,
+							INP_Passive = false,
+						},
+						KeywordColorBlue = {
+							INP_Integer = false,
+							CLRC_NoSliders = false,
+							INPID_InputControl = "ColorControl",
+							LINKID_DataType = "Number",
+							INP_Default = 0.145098,
+							IC_ControlID = 2,
+							IC_ControlGroup = 24,
 							ICS_ControlPage = "Controls",
 							IC_Visible = true,
 							INP_External = false,
@@ -2110,6 +2301,44 @@
 				UpdateHighlight = InstanceInput {
 					SourceOp = "Template",
 					Source = "UpdateHighlight",
+					Page = "Text",
+				},
+				KeywordLabel = InstanceInput {
+					SourceOp = "Template",
+					Source = "KeywordLabel",
+					Page = "Text",
+				},
+				KeywordEnabled = InstanceInput {
+					SourceOp = "Template",
+					Source = "KeywordEnabled",
+					Page = "Text",
+					Default = 1,
+				},
+				KeywordColorRed = InstanceInput {
+					SourceOp = "Template",
+					Source = "KeywordColorRed",
+					Name = "Keyword Color",
+					ControlGroup = 124,
+					Page = "Text",
+					Default = 0.745098,
+				},
+				KeywordColorGreen = InstanceInput {
+					SourceOp = "Template",
+					Source = "KeywordColorGreen",
+					ControlGroup = 124,
+					Page = "Text",
+					Default = 0.094118,
+				},
+				KeywordColorBlue = InstanceInput {
+					SourceOp = "Template",
+					Source = "KeywordColorBlue",
+					ControlGroup = 124,
+					Page = "Text",
+					Default = 0.145098,
+				},
+				UpdateKeywordColor = InstanceInput {
+					SourceOp = "Template",
+					Source = "UpdateKeywordColor",
 					Page = "Text",
 				},
 				FillLabel = InstanceInput {
