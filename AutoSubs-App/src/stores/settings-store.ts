@@ -149,6 +149,12 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
   styles = styles.map((st) =>
     st.mode === "karaoke" ? { ...st, mode: "plain" as const, animation: st.animation ?? "Word Highlight" } : st,
   );
+  // Highlight colour moved into the Word Highlight settings.
+  styles = styles.map((st) =>
+    st.animation === "Word Highlight" && st.highlightColor && !st.animationSettings?.["Highlight Color"]
+      ? { ...st, animationSettings: { ...(st.animationSettings ?? {}), "Highlight Color": st.highlightColor } }
+      : st,
+  );
   // Position and stroke were added to the Tipico look later.
   styles = styles.map((st) =>
     st.id === "builtin:tipico-track" && st.look && st.look.positionY == null

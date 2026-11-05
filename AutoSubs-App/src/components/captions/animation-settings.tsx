@@ -108,7 +108,7 @@ function FieldRow({
   if (field.type === "color") {
     return (
       <InspectorRow label={field.label} onReset={onReset}>
-        <ColorField value={(value as string) ?? "#ffffff"} onChange={onChange} />
+        <ColorField value={(value as string) ?? field.placeholder ?? "#ffffff"} onChange={onChange} />
       </InspectorRow>
     );
   }

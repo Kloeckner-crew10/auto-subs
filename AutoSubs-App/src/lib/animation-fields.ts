@@ -35,6 +35,7 @@ export const ANIMATION_FIELDS: Record<Exclude<SubtitleAnimation, "none">, Animat
   "Word Highlight": [
     ...text,
     wordSpacing,
+    { key: "Highlight Color", label: "Color", type: "color", group: "Highlight", placeholder: "#FFE64A" },
     n("Softness", "Softness", "Highlight", "0.0", 0, 1),
     n("Glow", "Glow", "Highlight", "0.0", 0, 1),
     n("Blend", "Blend", "Highlight", "1.0", 0, 1),

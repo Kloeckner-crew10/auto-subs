@@ -247,10 +247,10 @@ function TrackPreviewBox({ style }: { style: SubtitleStyleDef }) {
   const cues = React.useMemo(
     () =>
       style.animation === "Word Highlight"
-        ? karaokeSubtitles([SAMPLE], keywords, keywordColor, style.highlightColor)
+        ? karaokeSubtitles([SAMPLE], keywords, keywordColor, (style.animationSettings?.["Highlight Color"] as string | undefined) ?? style.highlightColor)
         : colorKeywords([SAMPLE], keywords, keywordColor),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [style.animation, style.highlightColor, keywordColor, keywords.join("|")],
+    [style.animation, style.highlightColor, style.animationSettings, keywordColor, keywords.join("|")],
   );
   const [step, setStep] = React.useState(0);
   React.useEffect(() => {
@@ -363,7 +363,7 @@ function SubtitleStyleDialog({
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </Field>
-          <Field label={t("trackStyles.animation")}>
+          <Field label={t("trackStyles.animation")} wide>
             <Select
               value={draft.animation ?? "none"}
               onValueChange={(v) => setDraft({ ...draft, mode: "plain", animation: v as SubtitleAnimation })}
@@ -378,13 +378,6 @@ function SubtitleStyleDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
-          <Field label={t("trackPreview.highlightColor")}>
-            <ColorInput
-              value={draft.highlightColor}
-              disabled={draft.animation !== "Word Highlight"}
-              onChange={(v) => setDraft({ ...draft, highlightColor: v })}
-            />
           </Field>
         </div>
 
@@ -458,17 +451,3 @@ function Field({ label, wide, children }: { label: string; wide?: boolean; child
   );
 }
 
-function ColorInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
-  return (
-    <div className={cn("flex items-center gap-2", disabled && "opacity-50")}>
-      <input
-        type="color"
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        className="size-8 shrink-0 cursor-pointer rounded border bg-transparent p-0.5"
-      />
-      <Input value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className="font-mono" />
-    </div>
-  );
-}
