@@ -707,13 +707,14 @@ mod mac {
         let (sg, _) = find_lib(&nodes).ok_or("Effects library not found: open the Effects panel in Resolve")?;
         // Search field.
         let search = nodes.iter()
-            .filter(|n| n.role == "AXCheckBox" && n.desc == "Search" && n.x >= sg.x && n.x <= sg.x + sg.w + 40.0 && n.y < sg.y + 5.0 && n.y > sg.y - 60.0)
+            .filter(|n| n.role == "AXCheckBox" && n.desc == "Search" && n.x >= sg.x && n.x <= sg.x + sg.w + 40.0 && n.y < sg.y + 5.0 && n.y > sg.y - 140.0)
             .min_by(|a, b| (sg.y - a.y).abs().partial_cmp(&(sg.y - b.y).abs()).unwrap_or(std::cmp::Ordering::Equal))
             .ok_or("Effects search not found")?;
         if search.value == "0" { press(&search.el); sleep(Duration::from_millis(400)); }
+        let search = search.clone();
         let nodes = r.nodes()?;
         let field = nodes.iter()
-            .filter(|n| n.role == "AXTextField" && n.y >= sg.y - 10.0 && n.y < sg.y + 60.0 && n.x >= sg.x - 5.0 && n.x < sg.x + sg.w)
+            .filter(|n| n.role == "AXTextField" && n.y > search.y && n.y < sg.y + 60.0 && n.x >= sg.x - 5.0 && n.x < sg.x + sg.w)
             .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
             .ok_or("Effects search field not found")?;
         set_text(&field.el, name);
@@ -750,6 +751,10 @@ mod mac {
         if let Some(f) = nodes.iter().find(|n| n.role == "AXTextField" && n.value == name) { set_text(&f.el, ""); }
         if let Some(sb) = nodes.iter().find(|n| n.role == "AXCheckBox" && n.desc == "Search" && n.value == "1" && n.x >= sg.x && n.x <= sg.x + sg.w + 40.0) {
             press(&sb.el);
+            sleep(Duration::from_millis(250));
+            // Some toggles ignore an accessibility press: click it instead.
+            let still = r.nodes()?.into_iter().find(|n| n.role == "AXCheckBox" && n.desc == "Search" && (n.x - sb.x).abs() < 2.0 && (n.y - sb.y).abs() < 2.0);
+            if let Some(n) = still { if n.value == "1" { let _ = r.click(n.center()); } }
         }
         Ok(())
     }
