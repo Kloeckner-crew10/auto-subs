@@ -821,6 +821,9 @@
     "searchFont": "글꼴 검색…",
     "noFont": "글꼴 없음",
     "animation": "애니메이션",
-    "animationNone": "없음"
+    "animationNone": "없음",
+    "animationSettings": "설정: {{name}}",
+    "animationSettingsHint": "비워 두면 스타일 값 또는 Resolve 기본값을 사용합니다. 이름은 Resolve(인스펙터 → Track)와 같습니다.",
+    "fromStyle": "스타일에서"
   }
 }

@@ -831,6 +831,9 @@
     "searchFont": "Поиск шрифта…",
     "noFont": "Шрифт не найден",
     "animation": "Анимация",
-    "animationNone": "Нет"
+    "animationNone": "Нет",
+    "animationSettings": "Настройки: {{name}}",
+    "animationSettingsHint": "Пусто = значение стиля или значение Resolve по умолчанию. Названия как в Resolve (Инспектор → Track).",
+    "fromStyle": "из стиля"
   }
 }

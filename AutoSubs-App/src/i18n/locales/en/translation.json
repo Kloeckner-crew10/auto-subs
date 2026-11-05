@@ -841,6 +841,9 @@
     "searchFont": "Search fonts…",
     "noFont": "No font found",
     "animation": "Animation",
-    "animationNone": "None"
+    "animationNone": "None",
+    "animationSettings": "Settings: {{name}}",
+    "animationSettingsHint": "Leave empty to use the style's value or Resolve's default. Names as in Resolve (Inspector → Track).",
+    "fromStyle": "from style"
   }
 }

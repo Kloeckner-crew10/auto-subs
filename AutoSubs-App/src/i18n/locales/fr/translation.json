@@ -821,6 +821,9 @@
     "searchFont": "Rechercher une police…",
     "noFont": "Aucune police",
     "animation": "Animation",
-    "animationNone": "Aucune"
+    "animationNone": "Aucune",
+    "animationSettings": "Réglages : {{name}}",
+    "animationSettingsHint": "Vide = valeur du style ou valeur par défaut de Resolve. Noms comme dans Resolve (Inspecteur → Track).",
+    "fromStyle": "du style"
   }
 }

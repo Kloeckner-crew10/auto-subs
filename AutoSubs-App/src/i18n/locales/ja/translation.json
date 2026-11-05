@@ -821,6 +821,9 @@
     "searchFont": "フォントを検索…",
     "noFont": "フォントが見つかりません",
     "animation": "アニメーション",
-    "animationNone": "なし"
+    "animationNone": "なし",
+    "animationSettings": "設定: {{name}}",
+    "animationSettingsHint": "空欄ならスタイルの値またはResolveの既定値を使用。名前はResolve（インスペクタ → Track）と同じです。",
+    "fromStyle": "スタイルから"
   }
 }

@@ -219,6 +219,11 @@ export interface SubtitleStyleDef {
     animation?: SubtitleAnimation;
     /** Highlight colour of the "Word Highlight" animation. */
     highlightColor: string;
+    /**
+     * Animation fields by Resolve label (see lib/animation-fields.ts). Missing
+     * = the style's own value (font, colour, size) or Resolve's default.
+     */
+    animationSettings?: Record<string, number | string>;
     look: TrackStyle;
     /**
      * Resolve subtitle track that carries this style ("AutoSubs - <name>").

@@ -29,6 +29,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
 import { fullTrackStyle } from "@/lib/track-style";
 import { TrackInspectorEditor } from "@/components/captions/track-inspector-editor";
+import { AnimationSettings } from "@/components/captions/animation-settings";
 import type { Subtitle, SubtitleAnimation, SubtitleStyleDef, TrackStyle } from "@/types";
 
 const SAMPLE_WORDS = ["Lennart Karl", "trifft", "für", "Bayern München"];
@@ -386,6 +387,15 @@ function SubtitleStyleDialog({
             />
           </Field>
         </div>
+
+        {draft.animation && draft.animation !== "none" && (
+          <AnimationSettings
+            animation={draft.animation}
+            look={draft.look}
+            value={draft.animationSettings ?? {}}
+            onChange={(animationSettings) => setDraft({ ...draft, animationSettings })}
+          />
+        )}
 
         {/* Resolve imports subtitles onto subtitle track 1 only, so a
             subtitle-track style cannot carry its own look; that is what the

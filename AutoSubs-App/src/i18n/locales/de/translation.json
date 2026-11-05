@@ -821,6 +821,9 @@
     "searchFont": "Schrift suchen…",
     "noFont": "Keine Schrift gefunden",
     "animation": "Animation",
-    "animationNone": "Keine"
+    "animationNone": "Keine",
+    "animationSettings": "Einstellungen: {{name}}",
+    "animationSettingsHint": "Leer lassen = Wert aus dem Stil bzw. Resolve-Standard. Namen wie in Resolve (Inspector → Track).",
+    "fromStyle": "aus Stil"
   }
 }

@@ -59,6 +59,10 @@ pub struct InspectorTrackStyle {
     pub highlight_color: String,
     pub frame_width: f64,
     pub frame_height: f64,
+    /// Animation fields by Resolve label: "Label" or "Label#n" (n-th label of
+    /// that name) and "Label@k" (k-th control after it). Numbers go into text
+    /// fields, "#rrggbb" into colour swatches, other text into combo boxes.
+    pub animation_settings: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Default for InspectorTrackStyle {
@@ -76,6 +80,7 @@ impl Default for InspectorTrackStyle {
             background_override_sizing: false,
             subtitle_settings: true, use_project_settings: true, max_line_length: 60.0, min_duration: 3.0, max_cps: 30.0,
             animation: String::new(), highlight_color: "#FFE64A".into(), frame_width: 1920.0, frame_height: 1080.0,
+            animation_settings: Default::default(),
         }
     }
 }
@@ -774,58 +779,118 @@ mod mac {
         if s.is_empty() || s == "-" { "0".into() } else { s }
     }
 
+    /// A Fusion-subtitle field by key: "Label", "Label#n" (n-th label of
+    /// that name), "Label@k" (k-th control of `role` after the label).
+    fn fusion_control(nodes: &[Node], key: &str, role: &str) -> Option<usize> {
+        let (base, k) = match key.rsplit_once('@') {
+            Some((b, k)) => (b, k.parse::<usize>().unwrap_or(0)),
+            None => (key, 0),
+        };
+        let (label, n) = match base.rsplit_once('#') {
+            Some((l, n)) => (l, n.parse::<usize>().unwrap_or(0)),
+            None => (base, 0),
+        };
+        // Only the Inspector's part of the window (right of the Track tab).
+        let track_x = nodes.iter().find(|m| m.role == "AXCheckBox" && m.title == "Caption").map(|m| m.x - 40.0).unwrap_or(0.0);
+        let li = nodes.iter().enumerate()
+            .filter(|(_, m)| m.role == "AXStaticText" && m.label() == label && m.x >= track_x)
+            .map(|(i, _)| i).nth(n)?;
+        let mut found = 0;
+        for i in li + 1..(li + 12).min(nodes.len()) {
+            let m = &nodes[i];
+            if m.role == "AXStaticText" && !m.label().is_empty() && m.label() != label
+                && m.label().parse::<f64>().is_err()
+                && !["X", "Y", "Top", "Bottom", "Left", "Right", "Start", "End"].contains(&m.label()) {
+                break; // next field's label
+            }
+            if m.role == role {
+                if found == k { return Some(i); }
+                found += 1;
+            }
+        }
+        None
+    }
+
+    fn fusion_number(r: &Resolve, key: &str, v: f64) -> Result<bool, String> {
+        let nodes = r.nodes()?;
+        let Some(i) = fusion_control(&nodes, key, "AXTextField") else { return Ok(false) };
+        let cur: f64 = nodes[i].value.parse().unwrap_or(f64::NAN);
+        if (cur - v).abs() > 0.00005 {
+            set_text(&nodes[i].el, &fmt4(v));
+        }
+        Ok(true)
+    }
+
+    /// Choose a combo box entry by typing its name; verified, one retry.
+    fn fusion_combo(r: &Resolve, key: &str, want: &str) -> Result<bool, String> {
+        for attempt in 0..2 {
+            let nodes = r.nodes()?;
+            let Some(i) = fusion_control(&nodes, key, "AXComboBox") else { return Ok(false) };
+            if nodes[i].title.eq_ignore_ascii_case(want) { return Ok(true); }
+            if attempt == 1 {
+                return Err(format!("Resolve has no \"{want}\" for {key} (it shows \"{}\")", nodes[i].title));
+            }
+            press(&nodes[i].el);
+            sleep(Duration::from_millis(350));
+            r.type_text(want);
+            sleep(Duration::from_millis(150));
+            r.key(36, CGEventFlags::empty());
+            sleep(Duration::from_millis(400));
+        }
+        Ok(true)
+    }
+
     /// Fields of the Fusion subtitle (shown under Track once an animation is
-    /// applied): each label is followed by its control.
+    /// applied). Every animation has its own set, so a field it lacks is
+    /// skipped. Font, size, colour and position come from the style unless
+    /// the animation settings name them.
     fn set_fusion_values(r: &Resolve, s: &InspectorTrackStyle) -> Result<(), String> {
         let fw = if s.frame_width > 0.0 { s.frame_width } else { 1920.0 };
         let fh = if s.frame_height > 0.0 { s.frame_height } else { 1080.0 };
-        let field_after = |nodes: &[Node], label: &str, axis: Option<&str>| -> Option<usize> {
-            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == label)?;
-            let from = match axis {
-                Some(a) => (li..(li + 8).min(nodes.len())).find(|&i| nodes[i].role == "AXStaticText" && nodes[i].label() == a)?,
-                None => li,
-            };
-            (from + 1..(from + 4).min(nodes.len())).find(|&i| nodes[i].role == "AXTextField")
+        let ov = &s.animation_settings;
+        let text = |k: &str, d: &str| -> String {
+            ov.get(k).and_then(|v| v.as_str()).filter(|v| !v.is_empty()).unwrap_or(d).to_string()
         };
-        let set = |label: &str, axis: Option<&str>, v: f64| -> Result<(), String> {
-            let nodes = r.nodes()?;
-            let i = field_after(&nodes, label, axis).ok_or(format!("Animation field {label} not found"))?;
-            let cur: f64 = nodes[i].value.parse().unwrap_or(f64::NAN);
-            if (cur - v).abs() > 0.00005 {
-                set_text(&nodes[i].el, &fmt4(v));
-            }
-            Ok(())
-        };
-        // Font and face: the two combo boxes after "Font".
-        for (k, want) in [(0usize, &s.font), (1, &s.font_face)] {
-            let nodes = r.nodes()?;
-            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == "Font").ok_or("Animation field Font not found")?;
-            let combos: Vec<usize> = (li + 1..(li + 12).min(nodes.len())).filter(|&i| nodes[i].role == "AXComboBox").collect();
-            if let Some(&ci) = combos.get(k) {
-                if !nodes[ci].title.eq_ignore_ascii_case(want) {
-                    press(&nodes[ci].el);
-                    sleep(Duration::from_millis(250));
-                    r.type_text(want);
-                    sleep(Duration::from_millis(80));
-                    r.key(36, CGEventFlags::empty());
-                    sleep(Duration::from_millis(300));
-                }
+        let num = |k: &str, d: f64| -> f64 { ov.get(k).and_then(|v| v.as_f64()).unwrap_or(d) };
+
+        fusion_combo(r, "Font", &text("Font", &s.font))?;
+        fusion_combo(r, "Font@1", &text("Font Face", &s.font_face))?;
+        // Position: "Center" (Word Highlight, Lollipop) or "Position".
+        for label in ["Center", "Position"] {
+            if fusion_number(r, &format!("{label}@0"), num(&format!("{label} X"), s.position_x / fw))? {
+                fusion_number(r, &format!("{label}@1"), num(&format!("{label} Y"), s.position_y / fh))?;
             }
         }
-        set("Center", Some("X"), s.position_x / fw)?;
-        set("Center", Some("Y"), s.position_y / fh)?;
         // Track Style size 58 is Resolve's default, the Fusion default 0.06.
         // Fusion sizes follow the frame width, the track style the height,
         // so portrait frames need the height/width ratio on top.
-        set("Size", None, s.size * 0.06 / 58.0 * (fh / fw).max(1.0))?;
-        set("Tracking", None, 1.0 + s.kerning / 100.0)?;
-        set("Line Spacing", None, 1.0 + s.line_spacing / 100.0)?;
-        set("Thickness", None, if s.stroke_size > 0.0 { s.stroke_size * 0.01 } else { 0.0 })?;
-        // Colours: best effort (the Fusion colour swatch has no accessible
-        // value); a failure here keeps the rest of the look.
-        for (label, hex) in [("Color", &s.color), ("Highlight Color", &s.highlight_color), ("Outline Color", &s.stroke_color)] {
-            if let Err(e) = fusion_color(r, label, hex) {
-                if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() { eprintln!("colour {label}: {e}"); }
+        fusion_number(r, "Size", num("Size", s.size * 0.06 / 58.0 * (fh / fw).max(1.0)))?;
+        fusion_number(r, "Tracking", num("Tracking", 1.0 + s.kerning / 100.0))?;
+        fusion_number(r, "Line Spacing", num("Line Spacing", 1.0 + s.line_spacing / 100.0))?;
+
+        // Remaining animation settings, as named.
+        let skip = ["Font", "Font Face", "Size", "Tracking", "Line Spacing", "Center X", "Center Y", "Position X", "Position Y", "Color", "Highlight Color"];
+        let mut keys: Vec<&String> = ov.keys().filter(|k| !skip.contains(&k.as_str())).collect();
+        keys.sort();
+        for key in keys {
+            let v = &ov[key];
+            if let Some(n) = v.as_f64() {
+                fusion_number(r, key, n)?;
+            } else if let Some(t) = v.as_str() {
+                if t.is_empty() { continue; }
+                if t.starts_with('#') && t.len() == 7 {
+                    if let Err(e) = fusion_color(r, key, t) {
+                        if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() { eprintln!("colour {key}: {e}"); }
+                    }
+                } else {
+                    fusion_combo(r, key, t)?;
+                }
+            }
+        }
+        // Text and highlight colour last (colour panel round trips).
+        for (key, hex) in [("Color", text("Color", &s.color)), ("Highlight Color", text("Highlight Color", &s.highlight_color))] {
+            if let Err(e) = fusion_color(r, key, &hex) {
+                if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() { eprintln!("colour {key}: {e}"); }
             }
         }
         Ok(())
@@ -835,10 +900,10 @@ mod mac {
     /// swatch opens one.
     fn fusion_color(r: &Resolve, label: &str, hex: &str) -> Result<(), String> {
         let (tr, tg, tb) = parse_hex(hex).ok_or(format!("bad colour {hex}"))?;
-        let locate = |nodes: &[Node]| -> Option<usize> {
-            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == label)?;
-            (li + 1..(li + 3).min(nodes.len())).find(|&i| nodes[i].role == "AXButton")
-        };
+        let locate = |nodes: &[Node]| -> Option<usize> { fusion_control(nodes, label, "AXButton") };
+        if fusion_control(&r.nodes()?, label, "AXButton").is_none() {
+            return Ok(()); // this animation has no such colour
+        }
         // A double click on a Fusion colour swatch opens the colour panel.
         click_visible_n(r, label, locate, true)?;
         let t = Instant::now();

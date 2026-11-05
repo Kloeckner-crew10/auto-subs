@@ -269,7 +269,7 @@ export async function addSubtitleTrackToTimeline(
  */
 export async function applySubtitleTrackLook(
   look: import('@/types').TrackStyle,
-  extra: { animation?: string; highlightColor?: string } = {},
+  extra: { animation?: string; highlightColor?: string; animationSettings?: Record<string, number | string> } = {},
 ): Promise<string> {
   const lockRes = await callResolve({ func: 'LockNonSubtitleTracks' });
   throwIfError(lockRes, 'LockNonSubtitleTracks');
@@ -282,6 +282,7 @@ export async function applySubtitleTrackLook(
       highlightColor: extra.highlightColor ?? '#FFE64A',
       frameWidth: res.width,
       frameHeight: res.height,
+      animationSettings: extra.animationSettings ?? {},
     };
     return await invoke<string>('apply_resolve_track_style', { style });
   } finally {

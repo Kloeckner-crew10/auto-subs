@@ -549,7 +549,7 @@ export function SubtitleViewerPanel({
         // look through Resolve's Inspector. A failure here keeps the captions.
         if (styleDef?.look && platform() === "macos") {
           try {
-            await applySubtitleTrackLook(styleDef.look, { animation: styleDef.animation, highlightColor: styleDef.highlightColor });
+            await applySubtitleTrackLook(styleDef.look, { animation: styleDef.animation, highlightColor: styleDef.highlightColor, animationSettings: styleDef.animationSettings });
           } catch (styleError) {
             console.error("Failed to set subtitle track style:", styleError);
             showError({

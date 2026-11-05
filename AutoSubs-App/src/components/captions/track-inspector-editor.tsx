@@ -28,13 +28,13 @@ import { cn } from "@/lib/utils";
 import { fullTrackStyle } from "@/lib/track-style";
 import type { FontCase, TrackStyle } from "@/types";
 
-interface FontFamily {
+export interface FontFamily {
   family: string;
   faces: string[];
 }
 
 let fontCache: Promise<FontFamily[]> | null = null;
-function loadFonts(): Promise<FontFamily[]> {
+export function loadFonts(): Promise<FontFamily[]> {
   fontCache ??= invoke<FontFamily[]>("list_system_fonts").catch(() => []);
   return fontCache;
 }
@@ -262,7 +262,7 @@ function XYField({ x, y, step = 1, onChange }: { x: number; y: number; step?: nu
   );
 }
 
-function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2">
       <input
@@ -296,7 +296,7 @@ function IconToggle({
   );
 }
 
-function FontPicker({ fonts, value, onChange }: { fonts: FontFamily[]; value: string; onChange: (v: string) => void }) {
+export function FontPicker({ fonts, value, onChange }: { fonts: FontFamily[]; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = React.useState(false);
   const { t } = useTranslation();
   return (

@@ -821,6 +821,9 @@
     "searchFont": "搜索字体…",
     "noFont": "未找到字体",
     "animation": "动画",
-    "animationNone": "无"
+    "animationNone": "无",
+    "animationSettings": "设置：{{name}}",
+    "animationSettingsHint": "留空则使用样式的值或 Resolve 默认值。名称与 Resolve（检查器 → Track）一致。",
+    "fromStyle": "来自样式"
   }
 }

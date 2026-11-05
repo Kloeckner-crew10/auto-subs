@@ -821,6 +821,9 @@
     "searchFont": "Buscar fuente…",
     "noFont": "Ninguna fuente",
     "animation": "Animación",
-    "animationNone": "Ninguna"
+    "animationNone": "Ninguna",
+    "animationSettings": "Ajustes: {{name}}",
+    "animationSettingsHint": "Vacío = valor del estilo o predeterminado de Resolve. Nombres como en Resolve (Inspector → Track).",
+    "fromStyle": "del estilo"
   }
 }
