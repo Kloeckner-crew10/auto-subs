@@ -187,6 +187,8 @@ export interface Settings {
 
     /** What "Send to timeline" puts down: Fusion captions, Resolve's subtitle track, or both. */
     outputTarget: OutputTarget;
+    /** Style for Resolve's subtitle track (no Fusion): plain or word highlight. */
+    subtitleTrackStyle: SubtitleTrackStyle;
     /** Safe-zone overlay controls (same as the VisibleZone plugin). */
     safeZone: SafeZoneSettings;
 
@@ -202,6 +204,12 @@ export interface Settings {
 }
 
 export type OutputTarget = "video" | "subtitle" | "both";
+
+export interface SubtitleTrackStyle {
+    /** "plain": one cue per subtitle; "karaoke": one cue per word, active word highlighted. */
+    mode: "plain" | "karaoke";
+    highlightColor: string;
+}
 
 /** "confidence": the surer model wins; "proof": model 2 always wins; "report": change nothing. */
 export type ProofPolicy = "confidence" | "proof" | "report";

@@ -535,6 +535,7 @@ export function SubtitleViewerPanel({
           subtitles,
           profileKeywords(profile),
           profile?.keywordColor,
+          useSettingsStore.getState().subtitleTrackStyle,
         );
         await addSubtitleTrackToTimeline(srtPath);
       }

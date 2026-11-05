@@ -799,9 +799,12 @@
     "columns": "Columns"
   },
   "trackPreview": {
-    "label": "Subtitle track look",
-    "explain": "On the subtitle track Resolve sets the look (Track style in the Inspector). Set it once; new subtitles inherit it.",
+    "label": "Subtitle track style",
+    "explain": "Track look from Resolve:",
     "shadow": "shadow",
-    "fusionOnly": "Fusion styles such as Chalkboard only apply to the video track."
+    "fusionOnly": "Fusion styles such as Chalkboard only apply to the video track.",
+    "plain": "Text only",
+    "karaoke": "Word highlight",
+    "highlightColor": "Highlight colour"
   }
 }

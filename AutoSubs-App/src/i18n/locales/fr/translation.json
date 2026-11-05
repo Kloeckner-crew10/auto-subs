@@ -779,9 +779,12 @@
     "columns": "Colonnes"
   },
   "trackPreview": {
-    "label": "Aspect de la piste de sous-titres",
-    "explain": "Sur la piste de sous-titres, Resolve définit l’aspect (style de piste). Réglez-le une fois.",
+    "label": "Style de la piste de sous-titres",
+    "explain": "Aspect de piste dans Resolve :",
     "shadow": "ombre",
-    "fusionOnly": "Les styles Fusion ne s’appliquent qu’à la piste vidéo."
+    "fusionOnly": "Les styles Fusion ne s’appliquent qu’à la piste vidéo.",
+    "plain": "Texte seul",
+    "karaoke": "Mot surligné",
+    "highlightColor": "Couleur de surlignage"
   }
 }

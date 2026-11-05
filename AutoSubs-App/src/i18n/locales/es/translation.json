@@ -779,9 +779,12 @@
     "columns": "Columnas"
   },
   "trackPreview": {
-    "label": "Aspecto de la pista de subtítulos",
-    "explain": "En la pista de subtítulos Resolve define el aspecto (estilo de pista). Ajústalo una vez.",
+    "label": "Estilo de la pista de subtítulos",
+    "explain": "Aspecto de la pista en Resolve:",
     "shadow": "sombra",
-    "fusionOnly": "Los estilos Fusion solo se aplican a la pista de vídeo."
+    "fusionOnly": "Los estilos Fusion solo se aplican a la pista de vídeo.",
+    "plain": "Solo texto",
+    "karaoke": "Resaltar palabra",
+    "highlightColor": "Color de resaltado"
   }
 }

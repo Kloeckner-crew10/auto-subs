@@ -1,4 +1,4 @@
-import { colorKeywords } from "@/lib/keyword-markup";
+import { colorKeywords, karaokeSubtitles } from "@/lib/keyword-markup";
 import { generateSrt } from "@/utils/srt-utils";
 // src/utils/fileUtils.ts
 import {
@@ -22,7 +22,7 @@ import {
   remove,
 } from "@tauri-apps/plugin-fs";
 import { platform } from "@tauri-apps/plugin-os";
-import { Subtitle, Speaker, ProofreadChange } from "@/types";
+import { Subtitle, Speaker, ProofreadChange, SubtitleTrackStyle } from "@/types";
 
 export { generateTranscriptTxt } from "./transcript-txt.ts";
 
@@ -499,11 +499,16 @@ export async function writeResolveSrt(
   subtitles: Subtitle[],
   keywords: string[] = [],
   keywordColor = "#C8102E",
+  style?: SubtitleTrackStyle,
 ): Promise<string> {
   const dir = await getSubtitleDocumentsDir();
   const base = filename.replace(/\.json$/i, "");
   const path = await join(dir, `${base}.srt`);
-  await writeTextFile(path, generateSrt(colorKeywords(subtitles, keywords, keywordColor)));
+  const cues =
+    style?.mode === "karaoke"
+      ? karaokeSubtitles(subtitles, keywords, keywordColor, style.highlightColor)
+      : colorKeywords(subtitles, keywords, keywordColor);
+  await writeTextFile(path, generateSrt(cues));
   return path;
 }
 

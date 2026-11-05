@@ -779,9 +779,12 @@
     "columns": "列"
   },
   "trackPreview": {
-    "label": "字幕轨道外观",
-    "explain": "字幕轨道的外观由 Resolve 的轨道样式决定，设置一次即可。",
+    "label": "字幕轨道样式",
+    "explain": "Resolve 中的轨道外观：",
     "shadow": "阴影",
-    "fusionOnly": "Fusion 样式仅适用于视频轨道。"
+    "fusionOnly": "Fusion 样式仅适用于视频轨道。",
+    "plain": "仅文本",
+    "karaoke": "逐词高亮",
+    "highlightColor": "高亮颜色"
   }
 }

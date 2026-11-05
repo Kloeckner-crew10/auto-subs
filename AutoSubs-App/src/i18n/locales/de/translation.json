@@ -779,9 +779,12 @@
     "columns": "Spalten"
   },
   "trackPreview": {
-    "label": "So sieht die Untertitelspur aus",
-    "explain": "Auf der Untertitelspur bestimmt Resolve den Look (Spur-Stil im Inspector). Stell ihn einmal so ein, neue Untertitel übernehmen ihn.",
+    "label": "Stil der Untertitelspur",
+    "explain": "Spur-Look aus Resolve:",
     "shadow": "Schatten",
-    "fusionOnly": "Fusion-Stile wie Chalkboard gelten nur für die Video-Spur."
+    "fusionOnly": "Fusion-Stile wie Chalkboard gelten nur für die Video-Spur.",
+    "plain": "Nur Text",
+    "karaoke": "Wort-Highlight",
+    "highlightColor": "Highlight-Farbe"
   }
 }

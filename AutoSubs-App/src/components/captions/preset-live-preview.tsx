@@ -13,8 +13,8 @@ import { loadPresetFont } from "@/lib/preset-fonts";
 const SAMPLE = ["Lennart", "Karl", "trifft", "für", "Bayern", "München"];
 /** Sample words drawn in the keyword colour (players, clubs). */
 const SAMPLE_KEYWORDS = new Set([0, 1, 4, 5]);
-const WORD_MS = 420;
-const HOLD_MS = 1300;
+const WORD_MS = 320;
+const HOLD_MS = 2600;
 
 type Settings = Record<string, unknown>;
 
@@ -111,7 +111,9 @@ export function PresetLivePreview({ preset, className }: { preset: CaptionPreset
       borderRadius: "0.25em",
       padding: "0 0.12em",
       display: "inline-block",
-      opacity: revealed ? 1 : 0,
+      // Not yet spoken words stay faintly visible so the whole sample line
+      // is always readable, whatever moment of the loop is on screen.
+      opacity: revealed ? 1 : 0.18,
       transform: entering && pop ? "scale(1)" : undefined,
       animation: entering
         ? `${pop ? "as-pop" : slide ? "as-slide" : "as-fade"} ${durationMs}ms ease-out`

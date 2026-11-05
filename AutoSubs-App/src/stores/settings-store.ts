@@ -83,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
   // Output
   outputTarget: "video",
+  subtitleTrackStyle: { mode: "plain", highlightColor: "#FFE64A" },
   safeZone: DEFAULT_SAFE_ZONE_SETTINGS,
 
   // Double proof
