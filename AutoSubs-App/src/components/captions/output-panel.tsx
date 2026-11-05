@@ -202,8 +202,11 @@ export function OutputPanel({
     outputTracks.length === 0 ||
     outputTracks.some((track) => track.value === selectedOutputTrack);
 
-  const needsTrackChoice = !trackIsValid;
-  const needsStyleChoice = isResolve && !styleIsAvailable;
+  // Sending only to Resolve's subtitle track needs neither a video track nor
+  // a Fusion style.
+  const subtitleOnly = isResolve && outputTarget === "subtitle";
+  const needsTrackChoice = !subtitleOnly && !trackIsValid;
+  const needsStyleChoice = !subtitleOnly && isResolve && !styleIsAvailable;
 
   const summaryParts: string[] = [];
   if (!isResolve && !isStandalone) {
