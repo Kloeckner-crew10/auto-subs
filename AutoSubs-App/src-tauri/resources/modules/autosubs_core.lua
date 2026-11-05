@@ -2049,9 +2049,23 @@ function AddSubtitleTrack(req)
         end
     end
 
-    -- Same call as the first working version: no trackIndex (Resolve ignores
-    -- it for subtitles and it changes how recordFrame is applied).
-    local appended = mediaPool:AppendToTimeline({ { mediaPoolItem = item, recordFrame = start } })
+    -- Where the first caption must land. Resolve's SRT append semantics vary
+    -- (it may drop the gap before the first cue or put SRT time 0 at the
+    -- record frame), so place once, measure, and re-place with a corrected
+    -- record frame if needed. No trackIndex: Resolve ignores it for subtitles
+    -- and it changes how recordFrame is applied.
+    local expected = tonumber(req.fromSec) and (start + math.floor(req.fromSec * frameRate + 0.5)) or nil
+    local function first_start(items)
+        local m
+        for _, it in ipairs(items or {}) do
+            local s = it.GetStart and it:GetStart()
+            if s and (not m or s < m) then m = s end
+        end
+        return m
+    end
+
+    local recordFrame = start
+    local appended = mediaPool:AppendToTimeline({ { mediaPoolItem = item, recordFrame = recordFrame } })
     if not appended or #appended == 0 then
         appended = mediaPool:AppendToTimeline({ item })
     end
@@ -2060,9 +2074,28 @@ function AddSubtitleTrack(req)
             "Resolve did not place the subtitles (is subtitle track 1 locked?)")
     end
 
-    local first = appended[1]
-    local offset = first and first.GetStart and (first:GetStart() - start) or 0
-    return { message = "Subtitle track added", count = #appended, startOffsetFrames = offset }
+    local landed = first_start(appended)
+    local attempts = 1
+    while expected and landed and math.abs(landed - expected) > 1 and attempts < 3 do
+        recordFrame = recordFrame + (expected - landed)
+        timeline:DeleteClips(appended, false)
+        appended = mediaPool:AppendToTimeline({ { mediaPoolItem = item, recordFrame = recordFrame } })
+        attempts = attempts + 1
+        if not appended or #appended == 0 then
+            return make_error("Failed to add subtitle track",
+                string.format("Re-placing the subtitles at frame %d failed", recordFrame))
+        end
+        landed = first_start(appended)
+    end
+    print(string.format("[AutoSubs] subtitles: expected %s landed %s recordFrame %d attempts %d",
+        tostring(expected), tostring(landed), recordFrame, attempts))
+    if expected and landed and math.abs(landed - expected) > 1 then
+        return make_error("Failed to add subtitle track", string.format(
+            "Subtitles landed at frame %d instead of %d (timeline start %d, %s fps, %d items). Please send this message.",
+            landed, expected, start, tostring(frameRate), #appended))
+    end
+    return { message = "Subtitle track added", count = #appended, expectedFrame = expected,
+             landedFrame = landed, attempts = attempts }
 end
 
 --- New subtitle style: a named subtitle track with one sample caption, and
