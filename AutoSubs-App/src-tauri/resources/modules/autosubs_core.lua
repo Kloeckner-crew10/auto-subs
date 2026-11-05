@@ -2013,8 +2013,10 @@ local function clear_subtitle_range(timeline, trackIndex, fromFrame, toFrame)
     end
 end
 
---- Send plain-text subtitles to the subtitle track of the selected style
---- (`trackName`), creating it when missing; without a name, to track 1.
+--- Send plain-text subtitles to Resolve's subtitle track. Resolve imports
+--- SRT media onto subtitle track 1 only, so that is the target. Earlier
+--- AutoSubs captions in the same range are removed first: Resolve appends
+--- after any clip still in the way, which would shift the whole set.
 function AddSubtitleTrack(req)
     refresh_project()
     local timeline = project:GetCurrentTimeline()
@@ -2023,18 +2025,10 @@ function AddSubtitleTrack(req)
     end
     resolve:OpenPage("edit")
 
-    local trackIndex = find_subtitle_track(timeline, req.trackName)
-    if not trackIndex then
-        if req.trackName and req.trackName ~= "" or (timeline:GetTrackCount("subtitle") or 0) == 0 then
-            timeline:AddTrack("subtitle")
-            trackIndex = timeline:GetTrackCount("subtitle")
-            if req.trackName and req.trackName ~= "" then
-                timeline:SetTrackName("subtitle", trackIndex, req.trackName)
-            end
-        else
-            trackIndex = 1
-        end
+    if (timeline:GetTrackCount("subtitle") or 0) == 0 then
+        timeline:AddTrack("subtitle")
     end
+    local trackIndex = 1
 
     local item, err = import_srt(req.srtPath)
     if not item then
@@ -2044,17 +2038,31 @@ function AddSubtitleTrack(req)
     local frameRate = tonumber(timeline:GetSetting("timelineFrameRate")) or 25
     local start = timeline:GetStartFrame()
     if tonumber(req.fromSec) and tonumber(req.toSec) then
-        clear_subtitle_range(timeline, trackIndex,
-            start + math.floor(req.fromSec * frameRate),
-            start + math.ceil(req.toSec * frameRate) + 1)
+        local fromFrame = start + math.floor(req.fromSec * frameRate)
+        local toFrame = start + math.ceil(req.toSec * frameRate) + 1
+        clear_subtitle_range(timeline, trackIndex, fromFrame, toFrame)
+        for _, it in ipairs(timeline:GetItemListInTrack("subtitle", trackIndex) or {}) do
+            if it:GetStart() < toFrame and it:GetEnd() > fromFrame then
+                return make_error("Failed to add subtitle track",
+                    "Existing subtitles on subtitle track 1 could not be removed; delete them and send again")
+            end
+        end
     end
 
-    local appended, diag = append_srt_to_track(timeline, item, trackIndex, start)
+    -- Same call as the first working version: no trackIndex (Resolve ignores
+    -- it for subtitles and it changes how recordFrame is applied).
+    local appended = mediaPool:AppendToTimeline({ { mediaPoolItem = item, recordFrame = start } })
+    if not appended or #appended == 0 then
+        appended = mediaPool:AppendToTimeline({ item })
+    end
     if not appended or #appended == 0 then
         return make_error("Failed to add subtitle track",
-            "Resolve did not place the subtitles on the timeline: " .. tostring(diag))
+            "Resolve did not place the subtitles (is subtitle track 1 locked?)")
     end
-    return { message = "Subtitle track added", count = #appended, trackIndex = item_track_index(appended[1]) }
+
+    local first = appended[1]
+    local offset = first and first.GetStart and (first:GetStart() - start) or 0
+    return { message = "Subtitle track added", count = #appended, startOffsetFrames = offset }
 end
 
 --- New subtitle style: a named subtitle track with one sample caption, and
