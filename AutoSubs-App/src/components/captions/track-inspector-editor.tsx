@@ -173,7 +173,7 @@ export function TrackInspectorEditor({
   );
 }
 
-function Section({
+export function Section({
   title,
   enabled,
   onToggle,
@@ -199,7 +199,7 @@ function Section({
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[96px_1fr] items-center gap-3">
       <span className="text-right text-muted-foreground">{label}</span>
@@ -213,7 +213,7 @@ function num(s: string, fallback: number) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function SliderField({
+export function SliderField({
   value,
   min,
   max,
