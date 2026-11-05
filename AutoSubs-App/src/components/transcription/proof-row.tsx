@@ -48,8 +48,13 @@ export function ProofRow({
             {modelsState.map((m, i) =>
               i === selectedModelIndex ? null : (
                 <SelectItem key={m.value} value={String(i)}>
-                  {m.label}
-                  {m.isDownloaded ? "" : ` (${m.size})`}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <img src={m.image} alt="" className="size-5 shrink-0 rounded object-contain" />
+                    <span className="truncate">{t(m.label)}</span>
+                    {m.isDownloaded ? null : (
+                      <span className="shrink-0 text-xs text-muted-foreground">{m.size}</span>
+                    )}
+                  </span>
                 </SelectItem>
               ),
             )}

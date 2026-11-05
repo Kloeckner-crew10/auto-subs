@@ -58,7 +58,7 @@ export function CompactSettingsRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[112px_minmax(0,1fr)] gap-3 px-3 py-2.5",
+        "grid grid-cols-[132px_minmax(0,1fr)] gap-3 px-3 py-2.5",
         alignTop ? "items-start" : "items-center",
         className,
       )}
