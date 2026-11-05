@@ -660,39 +660,15 @@ mod mac {
         if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() {
             eprintln!("color {section}>{label}: label#{li} @{},{} button#{bi} @{},{} desc={desc}", l.nodes[li].x, l.nodes[li].y, l.nodes[bi].x, l.nodes[bi].y);
         }
-        press(&l.nodes[bi].el);
-        // Find the "Colors" panel (press once more if a just-enabled section
-        // swallowed the first press).
-        let t = Instant::now();
-        let mut repressed = false;
-        let panel = loop {
-            let wins = attr(r.app.as_CFTypeRef(), "AXWindows");
-            let found = wins.and_then(|w| {
-                let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_get_rule(w.as_CFTypeRef() as CFArrayRef) };
-                arr.iter().find(|w| attr_string(w.as_CFTypeRef(), "AXTitle") == "Colors").map(|w| w.clone())
-            });
-            if let Some(p) = found { break p; }
-            if !repressed && t.elapsed() > Duration::from_millis(800) {
-                repressed = true;
-                if let Ok(l2) = layout(r) {
-                    if let Some(li2) = in_sec(&l2, section, label) {
-                        if let Some(b2) = (li2.saturating_sub(4)..li2).rev().find(|&i| l2.nodes[i].role == "AXButton" && l2.nodes[i].desc.contains("rgb")) {
-                            press(&l2.nodes[b2].el);
-                        }
-                    }
-                }
-            }
-            if t.elapsed() > Duration::from_millis(2500) {
-                return Err(format!("{section} > {label}: colour panel did not open"));
-            }
-            sleep(Duration::from_millis(60));
-        };
+        let panel = open_color_panel(r, section, label)?;
         sleep(Duration::from_millis(150));
         let mut nodes = Vec::new();
         collect(&panel, 0, &mut nodes);
         let hex_field = nodes.iter().find(|n| n.role == "AXTextField" && n.title.is_empty() && n.value.len() == 6)
             .ok_or("colour panel: hex field not found")?;
-        let ok = nodes.iter().find(|n| n.role == "AXButton" && n.title == "OK").ok_or("colour panel: OK not found")?;
+        let ok = attr(panel.as_CFTypeRef(), "AXDefaultButton")
+            .or_else(|| nodes.iter().find(|n| n.role == "AXButton" && n.title == "OK").map(|n| n.el.clone()))
+            .ok_or("colour panel: OK not found")?;
         let key = CFString::new("AXValue");
         let val = CFString::new(&format!("{:02X}{:02X}{:02X}", tr, tg, tb));
         unsafe {
@@ -701,9 +677,65 @@ mod mac {
             AXUIElementPerformAction(hex_field.el.as_CFTypeRef(), CFString::new("AXConfirm").as_concrete_TypeRef());
         }
         sleep(Duration::from_millis(120));
-        press(&ok.el);
-        sleep(Duration::from_millis(250));
+        press(&ok);
+        // Wait for the panel to close before the next control.
+        let t = Instant::now();
+        while find_color_panel(r).is_some() && t.elapsed() < Duration::from_millis(1500) {
+            sleep(Duration::from_millis(60));
+        }
         Ok(())
+    }
+
+    /// The colour dialog: a window with a colour well (title is localised).
+    fn find_color_panel(r: &Resolve) -> Option<CFType> {
+        let wins = attr(r.app.as_CFTypeRef(), "AXWindows")?;
+        let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_get_rule(wins.as_CFTypeRef() as CFArrayRef) };
+        let found = arr.iter().find(|w| {
+            let mut nodes = Vec::new();
+            let (ww, hh) = attr_point(w.as_CFTypeRef(), "AXSize", AX_SIZE);
+            if ww * hh > 400_000.0 { return false; } // the main window
+            collect(w, 0, &mut nodes);
+            nodes.iter().any(|n| n.role == "AXColorWell")
+        }).map(|w| w.clone());
+        found
+    }
+
+    /// Open the colour dialog for a colour button: scroll it into view and
+    /// click it (a freshly enabled section ignores an accessibility press);
+    /// fall back to an accessibility press.
+    fn open_color_panel(r: &Resolve, section: &str, label: &str) -> Result<CFType, String> {
+        let button = |l: &Layout| -> Option<usize> {
+            let li = in_sec(l, section, label)?;
+            (li.saturating_sub(4)..li).rev().find(|&i| l.nodes[i].role == "AXButton" && l.nodes[i].desc.contains("rgb"))
+        };
+        for attempt in 0..3 {
+            // Scroll into view (up to 12 steps), then click.
+            let mut clicked = false;
+            for _ in 0..12 {
+                let l = layout(r)?;
+                let bi = button(&l).ok_or(format!("{section} > {label}: no colour button"))?;
+                let n = &l.nodes[bi];
+                if visible(l.area, n) {
+                    if attempt < 2 { r.click(n.center())?; } else { press(&n.el); }
+                    clicked = true;
+                    break;
+                }
+                let mid = CGPoint::new(l.area.0 + l.area.2 / 2.0, l.area.1 + l.area.3 / 2.0);
+                r.scroll(mid, if n.y < l.area.1 { 6 } else { -6 });
+            }
+            if !clicked {
+                return Err(format!("{section} > {label}: could not scroll to the colour button"));
+            }
+            let t = Instant::now();
+            while t.elapsed() < Duration::from_millis(1500) {
+                sleep(Duration::from_millis(80));
+                if let Some(p) = find_color_panel(r) {
+                    sleep(Duration::from_millis(150));
+                    return Ok(p);
+                }
+            }
+        }
+        Err(format!("{section} > {label}: colour panel did not open"))
     }
 
     fn set_values(r: &Resolve, s: &InspectorTrackStyle) -> Result<(), String> {
