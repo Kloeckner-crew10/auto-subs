@@ -483,7 +483,8 @@
     "name": "名前",
     "namePlaceholder": "話者名を入力",
     "outputTrack": "出力トラック",
-    "title": "話者を編集"
+    "title": "話者を編集",
+    "textColor": "文字色"
   },
   "subtitles": {
     "addToTimeline": "タイムラインに送信",
@@ -699,6 +700,10 @@
       "video": "ビデオトラック（Fusion）",
       "subtitle": "字幕トラック（テキスト）",
       "both": "両方"
+    },
+    "speakerColors": {
+      "title": "話者ごとに色分け",
+      "description": "話者ごとの文字色（キーワードはそのまま）"
     }
   },
   "errorDialog": {

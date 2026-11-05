@@ -167,3 +167,14 @@ export function karaokeSubtitles(
   });
   return out;
 }
+
+/**
+ * Colour a cue's text, leaving already coloured spans (keywords) as they are.
+ * Used for speaker colours on the subtitle track.
+ */
+export function wrapUncolored(text: string, color: string): string {
+  return text
+    .split(/(<font color="[^"]+">[\s\S]*?<\/font>)/)
+    .map((part) => (!part || part.startsWith("<font ") || !part.trim() ? part : `<font color="${color}">${part}</font>`))
+    .join("");
+}

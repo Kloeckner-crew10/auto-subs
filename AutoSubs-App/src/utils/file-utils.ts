@@ -1,4 +1,4 @@
-import { colorKeywords } from "@/lib/keyword-markup";
+import { colorKeywords, wrapUncolored } from "@/lib/keyword-markup";
 import { generateSrt } from "@/utils/srt-utils";
 // src/utils/fileUtils.ts
 import {
@@ -500,6 +500,7 @@ export async function writeResolveSrt(
   keywords: string[] = [],
   keywordColor = "#C8102E",
   _style?: SubtitleTrackStyle,
+  speakerColor?: (subtitle: Subtitle) => string | undefined,
 ): Promise<string> {
   const dir = await getSubtitleDocumentsDir();
   const base = filename.replace(/\.json$/i, "");
@@ -507,7 +508,10 @@ export async function writeResolveSrt(
   const cues =
     // One cue per subtitle; animations (incl. word highlight) come from
     // Resolve's own subtitle animations, not from extra cues.
-    colorKeywords(subtitles, keywords, keywordColor);
+    colorKeywords(subtitles, keywords, keywordColor).map((cue, i) => {
+      const c = speakerColor?.(subtitles[i]);
+      return c ? { ...cue, text: wrapUncolored(cue.text ?? "", c) } : cue;
+    });
   await writeTextFile(path, generateSrt(cues));
   return path;
 }

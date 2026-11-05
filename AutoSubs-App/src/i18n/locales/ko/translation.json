@@ -483,7 +483,8 @@
     "name": "이름",
     "namePlaceholder": "화자 이름 입력",
     "outputTrack": "출력 트랙",
-    "title": "화자 편집"
+    "title": "화자 편집",
+    "textColor": "글자색"
   },
   "subtitles": {
     "addToTimeline": "타임라인으로 전송",
@@ -699,6 +700,10 @@
       "video": "비디오 트랙 (Fusion)",
       "subtitle": "자막 트랙 (텍스트)",
       "both": "둘 다"
+    },
+    "speakerColors": {
+      "title": "화자별 색상",
+      "description": "화자별 글자색, 키워드는 유지"
     }
   },
   "errorDialog": {

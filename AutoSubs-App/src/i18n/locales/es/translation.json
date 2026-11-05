@@ -227,7 +227,8 @@
     "colors": {
       "fill": "Relleno",
       "outline": "Contorno"
-    }
+    },
+    "textColor": "Color del texto"
   },
   "modelStatus": {
     "cached": "En caché",
@@ -699,6 +700,10 @@
       "video": "Pista de vídeo (Fusion)",
       "subtitle": "Pista de subtítulos (texto)",
       "both": "Ambas"
+    },
+    "speakerColors": {
+      "title": "Hablantes con su propio color",
+      "description": "Color de texto por hablante"
     }
   },
   "errorDialog": {

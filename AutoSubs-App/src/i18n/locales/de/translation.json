@@ -227,7 +227,8 @@
     "colors": {
       "fill": "Füllung",
       "outline": "Kontur"
-    }
+    },
+    "textColor": "Schriftfarbe"
   },
   "modelStatus": {
     "cached": "Im Cache",
@@ -699,6 +700,10 @@
       "video": "Video-Spur (Fusion-Untertitel)",
       "subtitle": "Untertitelspur (nur Text)",
       "both": "Beides"
+    },
+    "speakerColors": {
+      "title": "Sprecher in eigenen Farben",
+      "description": "Schriftfarbe je Sprecher, Keywords bleiben rot"
     }
   },
   "errorDialog": {

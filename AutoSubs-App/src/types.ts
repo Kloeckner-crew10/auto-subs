@@ -187,6 +187,8 @@ export interface Settings {
 
     /** What "Send to timeline" puts down: Fusion captions, Resolve's subtitle track, or both. */
     outputTarget: OutputTarget;
+    /** Subtitle track: each speaker's text in their own colour (keywords keep theirs). */
+    speakerColors: boolean;
     /** Style for Resolve's subtitle track (no Fusion): plain or word highlight. */
     subtitleTrackStyle: SubtitleTrackStyle;
     /** User-defined styles for Resolve's subtitle track. */

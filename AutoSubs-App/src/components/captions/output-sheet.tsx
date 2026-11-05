@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { SpeakerChips } from "@/components/subtitles/speaker-chips";
 import { CaptionStyleSection } from "@/components/captions/caption-style-section";
 import type { CaptionPresetActions } from "@/components/captions/use-caption-presets";
@@ -68,6 +69,7 @@ export function OutputSheet({
   const { t } = useTranslation();
   const selectedOutputTrack = useSettingsStore((s) => s.selectedOutputTrack);
   const outputTarget = useSettingsStore((s) => s.outputTarget);
+  const speakerColors = useSettingsStore((s) => s.speakerColors);
   const { selectedIntegration } = useIntegration();
   const isResolveOutput = selectedIntegration === "davinci";
   const updateSetting = useSettingsStore((s) => s.updateSetting);
@@ -181,11 +183,23 @@ export function OutputSheet({
                 <Label className="pl-1 text-xs text-muted-foreground">
                   {t("captions.speakers.label", { count: speakers.length })}
                 </Label>
-                <SpeakerChips
-                  speakers={speakers}
-                  onSpeakerChange={onSpeakerChange}
-                  tracks={outputTracks}
-                />
+                {outputTarget === "subtitle" && (
+                  <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs">
+                    <span>
+                      <span className="block font-medium">{t("captions.speakerColors.title")}</span>
+                      <span className="block text-muted-foreground">{t("captions.speakerColors.description")}</span>
+                    </span>
+                    <Switch checked={speakerColors} onCheckedChange={(v) => updateSetting("speakerColors", v)} />
+                  </label>
+                )}
+                {(outputTarget !== "subtitle" || speakerColors) && (
+                  <SpeakerChips
+                    speakers={speakers}
+                    onSpeakerChange={onSpeakerChange}
+                    tracks={outputTracks}
+                    simple={outputTarget === "subtitle"}
+                  />
+                )}
               </section>
             )}
 

@@ -231,7 +231,8 @@
       "none": "Нет",
       "fill": "Заливка",
       "outline": "Обводка"
-    }
+    },
+    "textColor": "Цвет текста"
   },
   "modelStatus": {
     "cached": "Загружена",
@@ -709,6 +710,10 @@
       "video": "Видеодорожка (Fusion)",
       "subtitle": "Дорожка субтитров (текст)",
       "both": "Оба"
+    },
+    "speakerColors": {
+      "title": "Свой цвет для каждого",
+      "description": "Цвет текста по говорящему"
     }
   },
   "errorDialog": {

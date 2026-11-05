@@ -227,7 +227,8 @@
     "colors": {
       "fill": "Remplissage",
       "outline": "Contour"
-    }
+    },
+    "textColor": "Couleur du texte"
   },
   "modelStatus": {
     "cached": "En cache",
@@ -699,6 +700,10 @@
       "video": "Piste vidéo (Fusion)",
       "subtitle": "Piste de sous-titres (texte)",
       "both": "Les deux"
+    },
+    "speakerColors": {
+      "title": "Couleur par intervenant",
+      "description": "Couleur du texte par intervenant"
     }
   },
   "errorDialog": {

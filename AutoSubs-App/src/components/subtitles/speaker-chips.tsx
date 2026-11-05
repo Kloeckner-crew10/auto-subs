@@ -16,10 +16,13 @@ export function SpeakerChips({
   speakers,
   onSpeakerChange,
   tracks,
+  simple,
 }: {
   speakers: Speaker[];
   onSpeakerChange: (index: number, speaker: Speaker) => void;
   tracks?: Track[];
+  /** Subtitle track: name and text colour only; the dot shows the colour. */
+  simple?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -36,7 +39,7 @@ export function SpeakerChips({
                 className="size-2.5 shrink-0 rounded-full border"
                 style={{
                   backgroundColor:
-                    speaker.style === "None" ? "transparent" : speaker.color,
+                    simple ? speaker.color : speaker.style === "None" ? "transparent" : speaker.color,
                   borderColor: speaker.color || "currentColor",
                 }}
               />
@@ -53,7 +56,8 @@ export function SpeakerChips({
             <SpeakerSettings
               speaker={speaker}
               onSpeakerChange={(updated) => onSpeakerChange(index, updated)}
-              tracks={tracks}
+              tracks={simple ? undefined : tracks}
+              simple={simple}
             />
           </PopoverContent>
         </Popover>

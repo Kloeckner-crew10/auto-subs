@@ -11,17 +11,51 @@ interface SpeakerSettingsProps {
     speaker: Speaker
     onSpeakerChange: (updated: Speaker) => void
     tracks?: Track[]
+    /** Subtitle track: only name and text colour. */
+    simple?: boolean
 }
 
 const DEFAULT_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
 
-export function SpeakerSettings({ speaker, onSpeakerChange, tracks }: SpeakerSettingsProps) {
+export function SpeakerSettings({ speaker, onSpeakerChange, tracks, simple }: SpeakerSettingsProps) {
     const { t } = useTranslation()
 
     // Ensure style defaults to "None" if not set
     const speakerStyle = speaker.style || "None"
     // Ensure color defaults to black if not set
     const speakerColor = speaker.color || "#000000"
+
+    if (simple) {
+        return (
+            <div className="space-y-2 min-w-82">
+                <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">{t("speakerEditor.name")}</Label>
+                    <Input
+                        value={speaker.name}
+                        onChange={(e) => onSpeakerChange({ ...speaker, name: e.target.value })}
+                        placeholder={t("speakerEditor.namePlaceholder")}
+                        className="text-sm bg-background"
+                    />
+                </div>
+                <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">{t("speakerEditor.textColor")}</Label>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="color"
+                            value={speakerColor}
+                            onChange={(e) => onSpeakerChange({ ...speaker, color: e.target.value })}
+                            className="h-8 w-10 shrink-0 cursor-pointer rounded border bg-transparent p-0.5"
+                        />
+                        <Input
+                            value={speakerColor}
+                            onChange={(e) => onSpeakerChange({ ...speaker, color: e.target.value })}
+                            className="font-mono text-sm bg-background"
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-2 min-w-82">

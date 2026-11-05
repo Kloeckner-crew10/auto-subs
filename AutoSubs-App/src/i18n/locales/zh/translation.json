@@ -227,7 +227,8 @@
     "colors": {
       "fill": "填充",
       "outline": "轮廓"
-    }
+    },
+    "textColor": "文字颜色"
   },
   "modelStatus": {
     "cached": "已缓存",
@@ -699,6 +700,10 @@
       "video": "视频轨道（Fusion）",
       "subtitle": "字幕轨道（纯文本）",
       "both": "两者"
+    },
+    "speakerColors": {
+      "title": "按说话人着色",
+      "description": "每位说话人的文字颜色，关键词不变"
     }
   },
   "errorDialog": {

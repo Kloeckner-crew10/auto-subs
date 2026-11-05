@@ -231,7 +231,8 @@
       "none": "None",
       "fill": "Fill",
       "outline": "Outline"
-    }
+    },
+    "textColor": "Text colour"
   },
   "modelStatus": {
     "cached": "Downloaded",
@@ -719,6 +720,10 @@
       "video": "Video track (Fusion captions)",
       "subtitle": "Subtitle track (text only)",
       "both": "Both"
+    },
+    "speakerColors": {
+      "title": "Speakers in their own colours",
+      "description": "Text colour per speaker, keywords keep theirs"
     }
   },
   "errorDialog": {

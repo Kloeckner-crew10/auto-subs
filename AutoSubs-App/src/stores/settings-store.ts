@@ -83,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
   // Output
   outputTarget: "video",
+  speakerColors: false,
   subtitleTrackStyle: { mode: "plain", highlightColor: "#FFE64A" },
   subtitleStyles: [],
   activeSubtitleStyleId: null,

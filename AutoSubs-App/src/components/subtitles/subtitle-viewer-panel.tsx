@@ -37,6 +37,7 @@ import { useErrorDialog } from "@/contexts/ErrorDialogContext";
 import { describeError } from "@/components/transcription/utils";
 import { ResolveApiError, addSubtitleTrackToTimeline, applySubtitleTrackLook } from "@/api/resolve-api";
 import { useTranslation } from "react-i18next";
+import { speakerIdBase } from "@/utils/speaker-label";
 import { type SubtitleDocumentListItem, writeResolveSrt } from "@/utils/file-utils";
 
 interface SubtitleViewerPanelProps {
@@ -536,6 +537,15 @@ export function SubtitleViewerPanel({
           profileKeywords(profile),
           profile?.keywordColor,
           activeSubtitleStyle(useSettingsStore.getState()),
+          useSettingsStore.getState().speakerColors && speakers.length > 1
+            ? (() => {
+                const base = speakerIdBase(subtitles);
+                return (sub: { speaker_id?: string }) => {
+                  const idx = Number(sub.speaker_id) - base;
+                  return Number.isFinite(idx) ? speakers[idx]?.color : undefined;
+                };
+              })()
+            : undefined,
         );
         const state = useSettingsStore.getState();
         const styleDef =
