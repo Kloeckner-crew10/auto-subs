@@ -1833,6 +1833,63 @@ local function find_named_video_track(timeline, name)
     return nil
 end
 
+-- Everything AutoSubs imports goes into the "AutoSubs" bin, sorted by kind.
+local AUTOSUBS_SUBBINS = {
+    subtitles = "Untertitel",
+    safezone = "Safe Zones",
+    samples = "Stil-Beispiele",
+}
+
+-- Which sub-bin a clip AutoSubs created belongs to, by its name.
+local function autosubs_category(clipName)
+    if type(clipName) ~= "string" then return nil end
+    if clipName:find("^autosubs%-style%-sample") then return "samples" end
+    if clipName:find("^safezone%-") then return "safezone" end
+    if clipName:find("__tr_%d+_%x+") then return "subtitles" end
+    return nil
+end
+
+local function autosubs_subbin(category)
+    local root = mediaPool:GetRootFolder()
+    local bin = get_root_subfolder(root, AUTOSUBS_BIN) or mediaPool:AddSubFolder(root, AUTOSUBS_BIN)
+    if not bin then return nil end
+    local name = AUTOSUBS_SUBBINS[category]
+    if not name then return bin end
+    for _, sub in ipairs(safe_list(call_api(bin, "GetSubFolderList"))) do
+        if call_api(sub, "GetName") == name then return sub end
+    end
+    return mediaPool:AddSubFolder(bin, name)
+end
+
+-- Move AutoSubs files that earlier versions left loose in the root bin.
+local function tidy_root_bin()
+    local root = mediaPool:GetRootFolder()
+    local byCategory = {}
+    for _, clip in ipairs(safe_list(call_api(root, "GetClipList"))) do
+        local cat = autosubs_category(clip_property(clip, "Clip Name"))
+        if cat then
+            byCategory[cat] = byCategory[cat] or {}
+            table.insert(byCategory[cat], clip)
+        end
+    end
+    for cat, clips in pairs(byCategory) do
+        local target = autosubs_subbin(cat)
+        if target then pcall(function() mediaPool:MoveClips(clips, target) end) end
+    end
+end
+
+--- Import files into the AutoSubs bin's `category` folder; the current media
+--- pool folder is restored afterwards.
+local function import_to_autosubs(paths, category)
+    local previous = mediaPool:GetCurrentFolder()
+    pcall(tidy_root_bin)
+    local target = autosubs_subbin(category)
+    if target then mediaPool:SetCurrentFolder(target) end
+    local imported = mediaPool:ImportMedia(paths)
+    if previous then pcall(function() mediaPool:SetCurrentFolder(previous) end) end
+    return imported
+end
+
 function GetTimelineResolution()
     refresh_project()
     local timeline = project:GetCurrentTimeline()
@@ -1879,7 +1936,7 @@ function AddSafeZoneOverlay(req)
     local idx = timeline:GetTrackCount("video")
     timeline:SetTrackName("video", idx, SAFE_ZONE_TRACK)
 
-    local imported = mediaPool:ImportMedia({ pngPath })
+    local imported = import_to_autosubs({ pngPath }, "safezone")
     local item = imported and imported[1]
     if not item then
         return make_error("Failed to add safe zone", "Resolve could not import the overlay image")
@@ -1930,7 +1987,8 @@ local function import_srt(srtPath)
     if type(srtPath) ~= "string" or srtPath == "" or not bmd.fileexists(srtPath) then
         return nil, "SRT file not found: " .. tostring(srtPath)
     end
-    local imported = mediaPool:ImportMedia({ srtPath })
+    local category = srtPath:find("autosubs%-style%-sample") and "samples" or "subtitles"
+    local imported = import_to_autosubs({ srtPath }, category)
     local item = imported and imported[1]
     if not item then
         return nil, "Resolve could not import the SRT file"
