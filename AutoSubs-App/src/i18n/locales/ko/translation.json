@@ -819,6 +819,8 @@
     "applyFailed": "트랙 스타일 미적용",
     "inspectorHint": "Resolve(인스펙터 → Track)와 같은 순서와 이름입니다. 전송 시 AutoSubs가 모두 적용합니다.",
     "searchFont": "글꼴 검색…",
-    "noFont": "글꼴 없음"
+    "noFont": "글꼴 없음",
+    "animation": "애니메이션",
+    "animationNone": "없음"
   }
 }

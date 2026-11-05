@@ -215,6 +215,9 @@ export interface SubtitleStyleDef {
     id: string;
     name: string;
     mode: SubtitleTrackStyle["mode"];
+    /** Resolve animation dragged onto the subtitle track (Effects > Titles > Animated). */
+    animation?: SubtitleAnimation;
+    /** Highlight colour of the "Word Highlight" animation. */
     highlightColor: string;
     look: TrackStyle;
     /**
@@ -223,6 +226,8 @@ export interface SubtitleStyleDef {
      */
     trackName?: string;
 }
+
+export type SubtitleAnimation = "none" | "Lollipop" | "Rotate" | "Slide In" | "Statement" | "Word Highlight";
 
 export interface SubtitleTrackStyle {
     /** "plain": one cue per subtitle; "karaoke": one cue per word, active word highlighted. */

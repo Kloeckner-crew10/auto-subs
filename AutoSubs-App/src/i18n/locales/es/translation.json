@@ -819,6 +819,8 @@
     "applyFailed": "Estilo de pista no aplicado",
     "inspectorHint": "Mismo orden y nombres que en Resolve (Inspector → Track). AutoSubs lo aplica todo al enviar.",
     "searchFont": "Buscar fuente…",
-    "noFont": "Ninguna fuente"
+    "noFont": "Ninguna fuente",
+    "animation": "Animación",
+    "animationNone": "Ninguna"
   }
 }

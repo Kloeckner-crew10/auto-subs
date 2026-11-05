@@ -267,12 +267,23 @@ export async function addSubtitleTrackToTimeline(
  * Set the look of subtitle track 1 through Resolve's Inspector (macOS).
  * Video and audio tracks are locked meanwhile so only subtitles get selected.
  */
-export async function applySubtitleTrackLook(look: import('@/types').TrackStyle): Promise<string> {
+export async function applySubtitleTrackLook(
+  look: import('@/types').TrackStyle,
+  extra: { animation?: string; highlightColor?: string } = {},
+): Promise<string> {
   const lockRes = await callResolve({ func: 'LockNonSubtitleTracks' });
   throwIfError(lockRes, 'LockNonSubtitleTracks');
   try {
     const { fullTrackStyle } = await import('@/lib/track-style');
-    return await invoke<string>('apply_resolve_track_style', { style: fullTrackStyle(look) });
+    const res = await getTimelineResolution().catch(() => ({ width: 1920, height: 1080 }));
+    const style = {
+      ...fullTrackStyle(look),
+      animation: extra.animation && extra.animation !== 'none' ? extra.animation : '',
+      highlightColor: extra.highlightColor ?? '#FFE64A',
+      frameWidth: res.width,
+      frameHeight: res.height,
+    };
+    return await invoke<string>('apply_resolve_track_style', { style });
   } finally {
     await callResolve({ func: 'UnlockTracks', locked: lockRes?.locked ?? [], timecode: lockRes?.timecode }).catch(() => {});
   }

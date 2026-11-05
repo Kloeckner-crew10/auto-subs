@@ -54,6 +54,11 @@ pub struct InspectorTrackStyle {
     pub max_line_length: f64,
     pub min_duration: f64,
     pub max_cps: f64,
+    /// Resolve subtitle animation (Effects > Titles > Animated); "" = none.
+    pub animation: String,
+    pub highlight_color: String,
+    pub frame_width: f64,
+    pub frame_height: f64,
 }
 
 impl Default for InspectorTrackStyle {
@@ -70,6 +75,7 @@ impl Default for InspectorTrackStyle {
             background_outline_width: 0.0, background_corner_radius: 0.01, background_opacity: 50.0,
             background_override_sizing: false,
             subtitle_settings: true, use_project_settings: true, max_line_length: 60.0, min_duration: 3.0, max_cps: 30.0,
+            animation: String::new(), highlight_color: "#FFE64A".into(), frame_width: 1920.0, frame_height: 1080.0,
         }
     }
 }
@@ -368,6 +374,35 @@ mod mac {
             Ok(())
         }
 
+        /// Mouse drag from `a` to `b` (Resolve must be in front).
+        fn drag(&self, a: CGPoint, b: CGPoint) -> Result<(), String> {
+            if !self.is_front() {
+                return Err("DaVinci Resolve lost focus; style not finished".into());
+            }
+            let src = CGEventSource::new(CGEventSourceStateID::HIDSystemState).unwrap();
+            let post = |t: CGEventType, p: CGPoint| -> Result<(), String> {
+                let e = CGEvent::new_mouse_event(src.clone(), t, p, CGMouseButton::Left).map_err(|_| "mouse event")?;
+                e.post(CGEventTapLocation::HID);
+                Ok(())
+            };
+            post(CGEventType::MouseMoved, a)?;
+            sleep(Duration::from_millis(60));
+            post(CGEventType::LeftMouseDown, a)?;
+            sleep(Duration::from_millis(150));
+            let steps = 24;
+            for i in 1..=steps {
+                let f = i as f64 / steps as f64;
+                post(CGEventType::LeftMouseDragged, CGPoint::new(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f))?;
+                sleep(Duration::from_millis(18));
+            }
+            sleep(Duration::from_millis(250));
+            post(CGEventType::LeftMouseDragged, b)?;
+            sleep(Duration::from_millis(150));
+            post(CGEventType::LeftMouseUp, b)?;
+            sleep(Duration::from_millis(300));
+            Ok(())
+        }
+
         fn scroll(&self, p: CGPoint, lines: i32) {
             let src = CGEventSource::new(CGEventSourceStateID::HIDSystemState).unwrap();
             if let Ok(m) = CGEvent::new_mouse_event(src.clone(), CGEventType::MouseMoved, p, CGMouseButton::Left) {
@@ -497,6 +532,333 @@ mod mac {
         Ok(())
     }
 
+    /// Select exactly one caption: with several (or a video clip too)
+    /// Resolve hides the Track tab. The Lua side parked the playhead on the
+    /// first caption; with auto-select on the subtitle track only, "Select
+    /// All Clips Under Playhead" picks just that caption.
+    fn select_caption(r: &Resolve) -> Result<(), String> {
+        r.menu(&["Edit", "Deselect All"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select All Tracks"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Video"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Audio"])?;
+        r.menu(&["Trim", "Select All Clips Under Playhead"])?;
+        let t = Instant::now();
+        while t.elapsed() < Duration::from_millis(2500) {
+            sleep(Duration::from_millis(100));
+            if r.nodes().map(|n| n.iter().any(|m| m.role == "AXCheckBox" && m.title == "Caption")).unwrap_or(false) {
+                // Track sub-tab
+                let nodes = r.nodes()?;
+                if let Some(i) = nodes.iter().position(|n| n.role == "AXCheckBox" && n.title == "Track" && n.desc.is_empty() && n.y > 60.0 && nodes.iter().any(|m| m.title == "Caption" && (m.y - n.y).abs() < 4.0)) {
+                    if nodes[i].value == "0" { press(&nodes[i].el); sleep(Duration::from_millis(250)); }
+                }
+                return Ok(());
+            }
+        }
+        Err("Resolve did not select a caption. Click one caption on the subtitle track and send again.".into())
+    }
+
+    fn has_fusion_subtitle(r: &Resolve) -> Result<bool, String> {
+        Ok(r.nodes()?.iter().any(|n| n.role == "AXButton" && n.desc == "Remove Fusion Subtitle"))
+    }
+
+    /// The Inspector's visible scroll area: the group right below the
+    /// Caption/Track tabs. Controls outside it are scrolled out of view.
+    fn viewport_of(nodes: &[Node], x: f64, _y: f64) -> (f64, f64, f64, f64) {
+        let track = nodes.iter().find(|n| n.role == "AXCheckBox" && n.title == "Track"
+            && nodes.iter().any(|m| m.role == "AXCheckBox" && m.title == "Caption" && (m.y - n.y).abs() < 4.0));
+        if let Some(t) = track {
+            if let Some(g) = nodes.iter()
+                .filter(|n| n.role == "AXGroup" && n.h > 60.0 && n.y >= t.y + 5.0 && n.x <= x && x <= n.x + n.w)
+                .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)
+                    .then((a.w * a.h).partial_cmp(&(b.w * b.h)).unwrap_or(std::cmp::Ordering::Equal)))
+            {
+                return (g.x, g.y, g.w, g.h);
+            }
+        }
+        // Unknown layout: treat nothing as visible, so callers scroll and
+        // finally give up instead of clicking outside the Inspector.
+        (x, 0.0, 0.0, 0.0)
+    }
+
+    /// Scroll a control into view and click it.
+    fn click_visible<F>(r: &Resolve, what: &str, locate: F) -> Result<(), String>
+    where
+        F: Fn(&[Node]) -> Option<usize>,
+    {
+        click_visible_n(r, what, locate, false)
+    }
+
+    fn click_visible_n<F>(r: &Resolve, what: &str, locate: F, double: bool) -> Result<(), String>
+    where
+        F: Fn(&[Node]) -> Option<usize>,
+    {
+        for _ in 0..14 {
+            let nodes = r.nodes()?;
+            let i = locate(&nodes).ok_or(format!("{what} not found"))?;
+            let n = &nodes[i];
+            let area = viewport_of(&nodes, n.x + 1.0, n.y + 1.0);
+            // The control itself is inside its group; use the group above it
+            // that is the Inspector viewport (taller than the control).
+            if n.y >= area.1 + 2.0 && n.y + n.h <= area.1 + area.3 - 2.0 && n.h > 0.0 {
+                return if double { r.double_click(n.center()) } else { r.click(n.center()) };
+            }
+            let mid = CGPoint::new(area.0 + area.2 / 2.0, area.1 + area.3 / 2.0);
+            r.scroll(mid, if n.y < area.1 { 6 } else { -6 });
+        }
+        Err(format!("Could not reach {what} in the Inspector"))
+    }
+
+    fn remove_fusion_subtitle(r: &Resolve) -> Result<(), String> {
+        let nodes = r.nodes()?;
+        if let Some(b) = nodes.iter().find(|n| n.role == "AXButton" && n.desc == "Remove Fusion Subtitle") {
+            press(&b.el);
+        }
+        sleep(Duration::from_millis(500));
+        if has_fusion_subtitle(r)? {
+            click_visible(r, "Remove Fusion Subtitle", |n| n.iter().position(|m| m.role == "AXButton" && m.desc == "Remove Fusion Subtitle"))?;
+            sleep(Duration::from_millis(600));
+        }
+        if has_fusion_subtitle(r)? {
+            return Err("Could not remove the previous subtitle animation".into());
+        }
+        Ok(())
+    }
+
+    /// Screen pixels of a rectangle (global points) as RGB rows, plus the
+    /// pixels-per-point scale. Uses `screencapture`, which needs the Screen
+    /// Recording permission for AutoSubs.
+    fn capture(x: f64, y: f64, w: f64, h: f64) -> Result<(Vec<[u8; 3]>, usize, usize, f64), String> {
+        let path = std::env::temp_dir().join(format!("autosubs-ax-{}.bmp", std::process::id()));
+        let rect = format!("{},{},{},{}", x.round() as i64, y.round() as i64, w.round().max(1.0) as i64, h.round().max(1.0) as i64);
+        let ok = std::process::Command::new("screencapture").args(["-x", "-t", "bmp", "-R", &rect])
+            .arg(&path).status().map(|s| s.success()).unwrap_or(false);
+        let data = std::fs::read(&path).map_err(|_| "Screen capture failed: allow AutoSubs under System Settings > Privacy & Security > Screen Recording".to_string())?;
+        let _ = std::fs::remove_file(&path);
+        if !ok || data.len() < 54 || &data[0..2] != b"BM" {
+            return Err("Screen capture failed: allow AutoSubs under System Settings > Privacy & Security > Screen Recording".into());
+        }
+        let rd32 = |o: usize| u32::from_le_bytes([data[o], data[o + 1], data[o + 2], data[o + 3]]);
+        let off = rd32(10) as usize;
+        let width = rd32(18) as i32;
+        let height = rd32(22) as i32;
+        let bpp = u16::from_le_bytes([data[28], data[29]]) as usize;
+        let (wpx, hpx) = (width.unsigned_abs() as usize, height.unsigned_abs() as usize);
+        let bytes = bpp / 8;
+        let row = (wpx * bytes + 3) / 4 * 4;
+        let mut px = vec![[0u8; 3]; wpx * hpx];
+        for yy in 0..hpx {
+            let src_y = if height > 0 { hpx - 1 - yy } else { yy };
+            for xx in 0..wpx {
+                let i = off + src_y * row + xx * bytes;
+                if i + 2 < data.len() {
+                    px[yy * wpx + xx] = [data[i + 2], data[i + 1], data[i]];
+                }
+            }
+        }
+        Ok((px, wpx, hpx, wpx as f64 / w.max(1.0)))
+    }
+
+    /// Runs (start, end) in pixel rows of a one-column strip where `pred` holds.
+    fn runs(col: &[[u8; 3]], pred: impl Fn([u8; 3]) -> bool, min_len: usize) -> Vec<(usize, usize)> {
+        let mut out = vec![];
+        let mut start = None;
+        for (i, c) in col.iter().enumerate() {
+            match (pred(*c), start) {
+                (true, None) => start = Some(i),
+                (false, Some(s)) => { if i - s >= min_len { out.push((s, i)); } start = None; }
+                _ => {}
+            }
+        }
+        if let Some(s) = start { if col.len() - s >= min_len { out.push((s, col.len())); } }
+        out
+    }
+
+    fn contains(n: &Node, x: f64, y: f64) -> bool {
+        n.x <= x && x <= n.x + n.w && n.y <= y && y <= n.y + n.h
+    }
+
+    /// Drag a Resolve subtitle animation from Effects > Titles onto the
+    /// subtitle track. Works with any panel layout: the effect is found with
+    /// the Effects search (it is then the first tile), the subtitle track by
+    /// the beige colour strip at the left edge of its track header.
+    fn apply_animation(r: &Resolve, name: &str) -> Result<(), String> {
+        // Effects panel open.
+        let nodes = r.nodes()?;
+        if let Some(fx) = nodes.iter().filter(|n| n.role == "AXCheckBox" && n.title == "Effects")
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)) {
+            if fx.value == "0" { press(&fx.el); sleep(Duration::from_millis(500)); }
+        }
+        // Effects library: the split group holding the "Favorites" entry.
+        let find_lib = |nodes: &[Node]| -> Option<(Node, Node)> {
+            let fav = nodes.iter().find(|n| n.role == "AXStaticText" && n.label() == "Favorites")?;
+            let sg = nodes.iter()
+                .filter(|n| n.role == "AXSplitGroup" && n.w > 300.0 && contains(n, fav.x + 2.0, fav.y + 2.0))
+                .min_by(|a, b| (a.w * a.h).partial_cmp(&(b.w * b.h)).unwrap_or(std::cmp::Ordering::Equal))?.clone();
+            let list = nodes.iter()
+                .filter(|n| n.role == "AXGroup" && n.x > fav.x + 60.0 && n.h > 60.0 && contains(&sg, n.x + 1.0, n.y + 1.0))
+                .max_by(|a, b| (a.w * a.h).partial_cmp(&(b.w * b.h)).unwrap_or(std::cmp::Ordering::Equal))?.clone();
+            Some((sg, list))
+        };
+        if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() {
+            let fav: Vec<_> = nodes.iter().filter(|n| n.label() == "Favorites").map(|n| (n.role.clone(), n.x, n.y)).collect();
+            let sgs: Vec<_> = nodes.iter().filter(|n| n.role == "AXSplitGroup").map(|n| (n.x, n.y, n.w, n.h)).collect();
+            eprintln!("nodes {} fav {:?} splitgroups {:?}", nodes.len(), fav, sgs);
+        }
+        let (sg, _) = find_lib(&nodes).ok_or("Effects library not found: open the Effects panel in Resolve")?;
+        // Search field.
+        let search = nodes.iter()
+            .filter(|n| n.role == "AXCheckBox" && n.desc == "Search" && n.x >= sg.x && n.x <= sg.x + sg.w + 40.0 && n.y < sg.y + 5.0 && n.y > sg.y - 60.0)
+            .min_by(|a, b| (sg.y - a.y).abs().partial_cmp(&(sg.y - b.y).abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .ok_or("Effects search not found")?;
+        if search.value == "0" { press(&search.el); sleep(Duration::from_millis(400)); }
+        let nodes = r.nodes()?;
+        let field = nodes.iter()
+            .filter(|n| n.role == "AXTextField" && n.y >= sg.y - 10.0 && n.y < sg.y + 60.0 && n.x >= sg.x - 5.0 && n.x < sg.x + sg.w)
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
+            .ok_or("Effects search field not found")?;
+        set_text(&field.el, name);
+        sleep(Duration::from_millis(700));
+
+        // The first tile in the filtered list: its black thumbnail.
+        let nodes = r.nodes()?;
+        let (_, list) = find_lib(&nodes).ok_or("Effects list not found")?;
+        let (px, wpx, hpx, scale) = capture(list.x, list.y, 60.0, list.h)?;
+        let colx = ((22.0 * scale) as usize).min(wpx.saturating_sub(1));
+        let col: Vec<[u8; 3]> = (0..hpx).map(|y| px[y * wpx + colx]).collect();
+        let tiles = runs(&col, |c| c[0] < 22 && c[1] < 22 && c[2] < 22, (10.0 * scale) as usize);
+        let (t0, t1) = *tiles.first().ok_or(format!("\"{name}\" not found in Resolve's Effects (Titles > Animated)"))?;
+        let from = CGPoint::new(list.x + 150.0, list.y + ((t0 + t1) as f64 / 2.0) / scale);
+
+        // Subtitle track header: beige strip at the timeline's left edge.
+        let tvo = nodes.iter().find(|n| n.role == "AXMenuButton" && n.desc == "Timeline View Options")
+            .ok_or("Timeline not found")?;
+        let tl = nodes.iter()
+            .filter(|n| n.role == "AXSplitGroup" && n.y >= tvo.y && n.y <= tvo.y + 90.0 && n.x <= tvo.x + 5.0 && n.h > 100.0)
+            .max_by(|a, b| (a.w * a.h).partial_cmp(&(b.w * b.h)).unwrap_or(std::cmp::Ordering::Equal))
+            .ok_or("Timeline area not found")?.clone();
+        let (px, wpx, hpx, scale) = capture(tl.x, tl.y, 6.0, tl.h)?;
+        let colx = ((2.0 * scale) as usize).min(wpx.saturating_sub(1));
+        let col: Vec<[u8; 3]> = (0..hpx).map(|y| px[y * wpx + colx]).collect();
+        let beige = runs(&col, |c| c[0] > 140 && c[1] > 130 && c[2] > 100 && (c[0] as i32 - c[2] as i32) > 20, (8.0 * scale) as usize);
+        let (b0, b1) = *beige.first().ok_or("Subtitle track not found in the timeline (no beige track header)")?;
+        let to = CGPoint::new(tl.x + 45.0, tl.y + ((b0 + b1) as f64 / 2.0) / scale);
+
+        r.drag(from, to)?;
+        sleep(Duration::from_millis(600));
+        // Leave the Effects search as it was.
+        let nodes = r.nodes()?;
+        if let Some(f) = nodes.iter().find(|n| n.role == "AXTextField" && n.value == name) { set_text(&f.el, ""); }
+        if let Some(sb) = nodes.iter().find(|n| n.role == "AXCheckBox" && n.desc == "Search" && n.value == "1" && n.x >= sg.x && n.x <= sg.x + sg.w + 40.0) {
+            press(&sb.el);
+        }
+        Ok(())
+    }
+
+    fn set_text(el: &CFType, text: &str) {
+        unsafe {
+            AXUIElementSetAttributeValue(el.as_CFTypeRef(), CFString::new("AXFocused").as_concrete_TypeRef(), CFBoolean::true_value().as_CFTypeRef());
+            AXUIElementSetAttributeValue(el.as_CFTypeRef(), CFString::new("AXValue").as_concrete_TypeRef(), CFString::new(text).as_CFTypeRef());
+            AXUIElementPerformAction(el.as_CFTypeRef(), CFString::new("AXConfirm").as_concrete_TypeRef());
+        }
+        sleep(Duration::from_millis(80));
+    }
+
+    fn fmt4(v: f64) -> String {
+        let s = format!("{:.4}", v);
+        let s = s.trim_end_matches('0').trim_end_matches('.').to_string();
+        if s.is_empty() || s == "-" { "0".into() } else { s }
+    }
+
+    /// Fields of the Fusion subtitle (shown under Track once an animation is
+    /// applied): each label is followed by its control.
+    fn set_fusion_values(r: &Resolve, s: &InspectorTrackStyle) -> Result<(), String> {
+        let fw = if s.frame_width > 0.0 { s.frame_width } else { 1920.0 };
+        let fh = if s.frame_height > 0.0 { s.frame_height } else { 1080.0 };
+        let field_after = |nodes: &[Node], label: &str, axis: Option<&str>| -> Option<usize> {
+            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == label)?;
+            let from = match axis {
+                Some(a) => (li..(li + 8).min(nodes.len())).find(|&i| nodes[i].role == "AXStaticText" && nodes[i].label() == a)?,
+                None => li,
+            };
+            (from + 1..(from + 4).min(nodes.len())).find(|&i| nodes[i].role == "AXTextField")
+        };
+        let set = |label: &str, axis: Option<&str>, v: f64| -> Result<(), String> {
+            let nodes = r.nodes()?;
+            let i = field_after(&nodes, label, axis).ok_or(format!("Animation field {label} not found"))?;
+            let cur: f64 = nodes[i].value.parse().unwrap_or(f64::NAN);
+            if (cur - v).abs() > 0.00005 {
+                set_text(&nodes[i].el, &fmt4(v));
+            }
+            Ok(())
+        };
+        // Font and face: the two combo boxes after "Font".
+        for (k, want) in [(0usize, &s.font), (1, &s.font_face)] {
+            let nodes = r.nodes()?;
+            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == "Font").ok_or("Animation field Font not found")?;
+            let combos: Vec<usize> = (li + 1..(li + 12).min(nodes.len())).filter(|&i| nodes[i].role == "AXComboBox").collect();
+            if let Some(&ci) = combos.get(k) {
+                if !nodes[ci].title.eq_ignore_ascii_case(want) {
+                    press(&nodes[ci].el);
+                    sleep(Duration::from_millis(250));
+                    r.type_text(want);
+                    sleep(Duration::from_millis(80));
+                    r.key(36, CGEventFlags::empty());
+                    sleep(Duration::from_millis(300));
+                }
+            }
+        }
+        set("Center", Some("X"), s.position_x / fw)?;
+        set("Center", Some("Y"), s.position_y / fh)?;
+        // Track Style size 58 is Resolve's default, the Fusion default 0.06.
+        // Fusion sizes follow the frame width, the track style the height,
+        // so portrait frames need the height/width ratio on top.
+        set("Size", None, s.size * 0.06 / 58.0 * (fh / fw).max(1.0))?;
+        set("Tracking", None, 1.0 + s.kerning / 100.0)?;
+        set("Line Spacing", None, 1.0 + s.line_spacing / 100.0)?;
+        set("Thickness", None, if s.stroke_size > 0.0 { s.stroke_size * 0.01 } else { 0.0 })?;
+        // Colours: best effort (the Fusion colour swatch has no accessible
+        // value); a failure here keeps the rest of the look.
+        for (label, hex) in [("Color", &s.color), ("Highlight Color", &s.highlight_color), ("Outline Color", &s.stroke_color)] {
+            if let Err(e) = fusion_color(r, label, hex) {
+                if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() { eprintln!("colour {label}: {e}"); }
+            }
+        }
+        Ok(())
+    }
+
+    /// Fusion colour swatch: click it and set the macOS colour panel, if the
+    /// swatch opens one.
+    fn fusion_color(r: &Resolve, label: &str, hex: &str) -> Result<(), String> {
+        let (tr, tg, tb) = parse_hex(hex).ok_or(format!("bad colour {hex}"))?;
+        let locate = |nodes: &[Node]| -> Option<usize> {
+            let li = nodes.iter().position(|n| n.role == "AXStaticText" && n.label() == label)?;
+            (li + 1..(li + 3).min(nodes.len())).find(|&i| nodes[i].role == "AXButton")
+        };
+        // A double click on a Fusion colour swatch opens the colour panel.
+        click_visible_n(r, label, locate, true)?;
+        let t = Instant::now();
+        let panel = loop {
+            if let Some(p) = find_color_panel(r) { break p; }
+            if t.elapsed() > Duration::from_millis(1200) { return Err("no colour panel".into()); }
+            sleep(Duration::from_millis(80));
+        };
+        sleep(Duration::from_millis(150));
+        let mut nodes = Vec::new();
+        collect(&panel, 0, &mut nodes);
+        let hex_field = nodes.iter().find(|n| n.role == "AXTextField" && n.title.is_empty() && n.value.len() == 6)
+            .ok_or("colour panel: hex field not found")?;
+        set_text(&hex_field.el, &format!("{:02X}{:02X}{:02X}", tr, tg, tb));
+        let ok = attr(panel.as_CFTypeRef(), "AXDefaultButton")
+            .or_else(|| nodes.iter().find(|n| n.role == "AXButton" && n.title == "OK").map(|n| n.el.clone()))
+            .ok_or("colour panel: OK not found")?;
+        press(&ok);
+        let t = Instant::now();
+        while find_color_panel(r).is_some() && t.elapsed() < Duration::from_millis(1500) {
+            sleep(Duration::from_millis(60));
+        }
+        Ok(())
+    }
+
     pub fn apply(style: &InspectorTrackStyle) -> Result<String, String> {
         let t0 = Instant::now();
         let opts = CFDictionary::from_CFType_pairs(&[(
@@ -517,29 +879,29 @@ mod mac {
         if let Some(i) = nodes.iter().position(|n| n.role == "AXCheckBox" && n.title == "Inspector") {
             if nodes[i].value == "0" { press(&nodes[i].el); sleep(Duration::from_millis(250)); }
         }
-        r.menu(&["Edit", "Deselect All"])?;
-        r.menu(&["Timeline", "Auto Select", "Auto Select All Tracks"])?;
-        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Video"])?;
-        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Audio"])?;
-        r.menu(&["Trim", "Select All Clips Under Playhead"])?;
         let restore = |r: &Resolve| {
             let _ = r.menu(&["Edit", "Deselect All"]);
             let _ = r.menu(&["Timeline", "Auto Select", "Auto Select All Tracks"]);
         };
-        let t = Instant::now();
-        let mut selected = false;
-        while t.elapsed() < Duration::from_millis(2000) {
-            sleep(Duration::from_millis(100));
-            if r.nodes().map(|n| n.iter().any(|m| m.role == "AXCheckBox" && m.title == "Caption")).unwrap_or(false) {
-                selected = true;
-                break;
-            }
-        }
-        if !selected {
+        if let Err(e) = select_caption(&r) {
             restore(&r);
-            return Err("Resolve did not select a caption. Click one caption on the subtitle track and send again.".into());
+            return Err(e);
         }
-        let result = set_values(&r, style);
+        let result = (|| -> Result<(), String> {
+            // A Resolve animation replaces the track style with a Fusion
+            // subtitle. Remove an existing one so the new choice applies.
+            if has_fusion_subtitle(&r)? {
+                remove_fusion_subtitle(&r)?;
+                select_caption(&r)?;
+            }
+            if style.animation.is_empty() {
+                set_values(&r, style)
+            } else {
+                apply_animation(&r, &style.animation)?;
+                select_caption(&r)?;
+                set_fusion_values(&r, style)
+            }
+        })();
         restore(&r);
         result.map(|_| format!("Track style set in {} ms", t0.elapsed().as_millis()))
     }

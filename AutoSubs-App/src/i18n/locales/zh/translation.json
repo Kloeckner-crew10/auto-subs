@@ -819,6 +819,8 @@
     "applyFailed": "未设置轨道样式",
     "inspectorHint": "顺序和名称与 Resolve（检查器 → Track）相同。发送时 AutoSubs 会全部应用。",
     "searchFont": "搜索字体…",
-    "noFont": "未找到字体"
+    "noFont": "未找到字体",
+    "animation": "动画",
+    "animationNone": "无"
   }
 }

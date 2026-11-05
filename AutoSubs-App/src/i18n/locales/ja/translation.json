@@ -819,6 +819,8 @@
     "applyFailed": "トラックスタイル未設定",
     "inspectorHint": "Resolve（インスペクタ → Track）と同じ順序と名前です。送信時にAutoSubsがすべて設定します。",
     "searchFont": "フォントを検索…",
-    "noFont": "フォントが見つかりません"
+    "noFont": "フォントが見つかりません",
+    "animation": "アニメーション",
+    "animationNone": "なし"
   }
 }

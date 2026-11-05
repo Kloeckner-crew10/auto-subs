@@ -143,6 +143,11 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
     seededStyles.add(TIPICO_ONLY);
     next = { ...next, activeSubtitleStyleId: "builtin:tipico-track" };
   }
+  // The one-cue-per-word "karaoke" SRT is not shown by Resolve; it became
+  // Resolve's own "Word Highlight" animation.
+  styles = styles.map((st) =>
+    st.mode === "karaoke" ? { ...st, mode: "plain" as const, animation: st.animation ?? "Word Highlight" } : st,
+  );
   // Position and stroke were added to the Tipico look later.
   styles = styles.map((st) =>
     st.id === "builtin:tipico-track" && st.look && st.look.positionY == null

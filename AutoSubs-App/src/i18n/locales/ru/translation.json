@@ -829,6 +829,8 @@
     "applyFailed": "Стиль дорожки не задан",
     "inspectorHint": "Тот же порядок и названия, что в Resolve (Инспектор → Track). AutoSubs применит всё при отправке.",
     "searchFont": "Поиск шрифта…",
-    "noFont": "Шрифт не найден"
+    "noFont": "Шрифт не найден",
+    "animation": "Анимация",
+    "animationNone": "Нет"
   }
 }

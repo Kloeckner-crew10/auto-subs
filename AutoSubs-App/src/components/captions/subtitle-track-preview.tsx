@@ -29,7 +29,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
 import { fullTrackStyle } from "@/lib/track-style";
 import { TrackInspectorEditor } from "@/components/captions/track-inspector-editor";
-import type { Subtitle, SubtitleStyleDef, TrackStyle } from "@/types";
+import type { Subtitle, SubtitleAnimation, SubtitleStyleDef, TrackStyle } from "@/types";
 
 const SAMPLE_WORDS = ["Lennart Karl", "trifft", "für", "Bayern München"];
 const SAMPLE: Subtitle = {
@@ -40,6 +40,23 @@ const SAMPLE: Subtitle = {
   words: SAMPLE_WORDS.map((w, i) => ({ word: i ? ` ${w}` : w, start: i, end: i + 1 })),
 } as Subtitle;
 const STEP_MS = 650;
+
+/** Rough stand-ins for Resolve's subtitle animations, for the preview only. */
+const PREVIEW_KEYFRAMES = `
+@keyframes as-slide { 0% { transform: translateX(-40%); opacity: 0 } 30%, 100% { transform: none; opacity: 1 } }
+@keyframes as-rotate { 0% { transform: rotate(-90deg) scale(.5); opacity: 0 } 30%, 100% { transform: none; opacity: 1 } }
+@keyframes as-pop { 0% { transform: scale(.2) } 15% { transform: scale(1.15) } 30%, 100% { transform: scale(1) } }
+`;
+
+function previewAnimation(animation?: string) {
+  switch (animation) {
+    case "Slide In": return "as-slide 2.6s ease-out infinite";
+    case "Rotate": return "as-rotate 2.6s ease-out infinite";
+    case "Lollipop":
+    case "Statement": return "as-pop 2.6s ease-out infinite";
+    default: return undefined;
+  }
+}
 
 function hexToRgba(hex: string, alpha: number) {
   const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
@@ -103,7 +120,7 @@ export function SubtitleTrackPreview() {
           <StyleCard
             key={style.id}
             title={style.name}
-            badge={style.mode === "karaoke" ? t("trackPreview.karaoke") : t("trackPreview.plain")}
+            badge={style.animation && style.animation !== "none" ? style.animation : t("trackPreview.plain")}
             selected={style.id === active?.id}
             onSelect={() => updateSetting("activeSubtitleStyleId", style.id)}
             onEdit={() => setEditing({ style, isNew: false })}
@@ -228,11 +245,11 @@ function TrackPreviewBox({ style }: { style: SubtitleStyleDef }) {
 
   const cues = React.useMemo(
     () =>
-      style.mode === "karaoke"
+      style.animation === "Word Highlight"
         ? karaokeSubtitles([SAMPLE], keywords, keywordColor, style.highlightColor)
         : colorKeywords([SAMPLE], keywords, keywordColor),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [style.mode, style.highlightColor, keywordColor, keywords.join("|")],
+    [style.animation, style.highlightColor, keywordColor, keywords.join("|")],
   );
   const [step, setStep] = React.useState(0);
   React.useEffect(() => {
@@ -280,18 +297,22 @@ function TrackPreviewBox({ style }: { style: SubtitleStyleDef }) {
             paintOrder: full.strokeOutsideOnly ? "stroke fill" : undefined,
           }}
         >
+          <style>{PREVIEW_KEYFRAMES}</style>
           <span
+            key={`${style.animation}-${step}`}
             style={
-              full.background
+              full.background || style.animation === "Statement"
                 ? {
-                    background: hexToRgba(full.backgroundColor, full.backgroundOpacity / 100),
+                    display: "inline-block",
+                    animation: previewAnimation(style.animation),
+                    background: style.animation === "Statement" && !full.background ? "#e00000" : hexToRgba(full.backgroundColor, full.backgroundOpacity / 100),
                     outline: full.backgroundOutlineWidth > 0 ? `${full.backgroundOutlineWidth * 0.1 * unit}px solid ${full.backgroundOutlineColor}` : undefined,
                     borderRadius: `${full.backgroundCornerRadius * 100}%`,
                     padding: "0 0.25em",
                     boxDecorationBreak: "clone",
                     WebkitBoxDecorationBreak: "clone",
                   }
-                : undefined
+                : { display: "inline-block", animation: previewAnimation(style.animation) }
             }
           >
           {runs.map((r, i) => (
@@ -341,21 +362,26 @@ function SubtitleStyleDialog({
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </Field>
-          <Field label={t("trackStyles.mode")}>
-            <Select value={draft.mode} onValueChange={(v) => setDraft({ ...draft, mode: v as SubtitleStyleDef["mode"] })}>
+          <Field label={t("trackStyles.animation")}>
+            <Select
+              value={draft.animation ?? "none"}
+              onValueChange={(v) => setDraft({ ...draft, mode: "plain", animation: v as SubtitleAnimation })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="plain">{t("trackPreview.plain")}</SelectItem>
-                <SelectItem value="karaoke">{t("trackPreview.karaoke")}</SelectItem>
+                <SelectItem value="none">{t("trackStyles.animationNone")}</SelectItem>
+                {(["Word Highlight", "Lollipop", "Rotate", "Slide In", "Statement"] as const).map((a) => (
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
           <Field label={t("trackPreview.highlightColor")}>
             <ColorInput
               value={draft.highlightColor}
-              disabled={draft.mode !== "karaoke"}
+              disabled={draft.animation !== "Word Highlight"}
               onChange={(v) => setDraft({ ...draft, highlightColor: v })}
             />
           </Field>

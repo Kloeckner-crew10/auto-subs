@@ -819,6 +819,8 @@
     "applyFailed": "Spurstil nicht gesetzt",
     "inspectorHint": "Gleiche Reihenfolge und Namen wie in Resolve (Inspector → Track). AutoSubs setzt alles beim Senden.",
     "searchFont": "Schrift suchen…",
-    "noFont": "Keine Schrift gefunden"
+    "noFont": "Keine Schrift gefunden",
+    "animation": "Animation",
+    "animationNone": "Keine"
   }
 }
