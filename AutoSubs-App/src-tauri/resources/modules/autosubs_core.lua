@@ -2119,7 +2119,18 @@ function LockNonSubtitleTracks()
     if (timeline:GetTrackCount("subtitle") or 0) >= 1 and timeline:GetIsTrackLocked("subtitle", 1) then
         timeline:SetTrackLock("subtitle", 1, false)
     end
-    return { locked = locked }
+    -- Park the playhead on the first caption so "Select All Clips Under
+    -- Playhead" finds it; the old position is restored by UnlockTracks.
+    local savedTimecode = timeline:GetCurrentTimecode()
+    local first = (timeline:GetItemListInTrack("subtitle", 1) or {})[1]
+    if first then
+        local frameRate = tonumber(timeline:GetSetting("timelineFrameRate")) or 25
+        local mid = math.floor((first:GetStart() + first:GetEnd()) / 2)
+        local tc = timecode.timecode_from_frame_auto(mid, frameRate,
+            timeline:GetSetting("timelineDropFrameTimecode"))
+        pcall(function() timeline:SetCurrentTimecode(tc) end)
+    end
+    return { locked = locked, timecode = savedTimecode }
 end
 
 function UnlockTracks(req)
@@ -2128,6 +2139,9 @@ function UnlockTracks(req)
     if not timeline then return { ok = false } end
     for _, t in ipairs(req.locked or {}) do
         pcall(function() timeline:SetTrackLock(t.kind, tonumber(t.index), false) end)
+    end
+    if req.timecode then
+        pcall(function() timeline:SetCurrentTimecode(req.timecode) end)
     end
     return { ok = true }
 end

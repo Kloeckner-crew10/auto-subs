@@ -215,20 +215,24 @@ mod mac {
             attr_string(self.app.as_CFTypeRef(), "AXFrontmost") == "1"
         }
 
-        fn menu(&self, top: &str, item: &str) -> Result<(), String> {
+        /// Press a menu item by its path, e.g. ["Timeline", "Auto Select", "Auto Select All Tracks"].
+        fn menu(&self, path: &[&str]) -> Result<(), String> {
             let bar = attr(self.app.as_CFTypeRef(), "AXMenuBar").ok_or("no menu bar")?;
-            for m in children(bar.as_CFTypeRef()) {
-                if attr_string(m.as_CFTypeRef(), "AXTitle") != top { continue; }
-                for menu in children(m.as_CFTypeRef()) {
-                    for it in children(menu.as_CFTypeRef()) {
-                        if attr_string(it.as_CFTypeRef(), "AXTitle") == item {
-                            press(&it);
-                            return Ok(());
-                        }
-                    }
+            let mut level = children(bar.as_CFTypeRef());
+            for (depth, name) in path.iter().enumerate() {
+                let found = level.iter().find(|e| attr_string(e.as_CFTypeRef(), "AXTitle") == *name).cloned()
+                    .ok_or_else(|| format!("menu item {} not found", path.join(" > ")))?;
+                if depth == path.len() - 1 {
+                    press(&found);
+                    sleep(Duration::from_millis(60));
+                    return Ok(());
                 }
+                // The item's single child is its menu; that menu's children are the items.
+                level = children(found.as_CFTypeRef()).into_iter()
+                    .flat_map(|m| children(m.as_CFTypeRef()))
+                    .collect();
             }
-            Err(format!("menu item {top} > {item} not found"))
+            Err("empty menu path".into())
         }
 
         fn key(&self, code: u16, flags: CGEventFlags) {
@@ -411,14 +415,45 @@ mod mac {
         }
         let r = Resolve::find()?;
         r.bring_front()?;
-        r.menu("Edit", "Select All")?;
-        sleep(Duration::from_millis(250));
-
-        // Inspector open, Video tab, Track sub-tab.
+        // Exactly one caption must be selected: with several (or a video clip
+        // too) Resolve hides the Track tab. The Lua side parked the playhead on
+        // the first caption; with auto-select on the subtitle track only,
+        // "Select All Clips Under Playhead" picks just that caption.
+        // The Inspector must be open to show the selection.
         let nodes = r.nodes()?;
         if let Some(i) = nodes.iter().position(|n| n.role == "AXCheckBox" && n.title == "Inspector") {
             if nodes[i].value == "0" { press(&nodes[i].el); sleep(Duration::from_millis(250)); }
         }
+        r.menu(&["Edit", "Deselect All"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select All Tracks"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Video"])?;
+        r.menu(&["Timeline", "Auto Select", "Auto Select/Deselect All Audio"])?;
+        r.menu(&["Trim", "Select All Clips Under Playhead"])?;
+        let restore = |r: &Resolve| {
+            let _ = r.menu(&["Edit", "Deselect All"]);
+            let _ = r.menu(&["Timeline", "Auto Select", "Auto Select All Tracks"]);
+        };
+        let t = Instant::now();
+        let mut selected = false;
+        while t.elapsed() < Duration::from_millis(2000) {
+            sleep(Duration::from_millis(100));
+            if r.nodes().map(|n| n.iter().any(|m| m.role == "AXCheckBox" && m.title == "Caption")).unwrap_or(false) {
+                selected = true;
+                break;
+            }
+        }
+        if !selected {
+            restore(&r);
+            return Err("Resolve did not select a caption. Click one caption on the subtitle track and send again.".into());
+        }
+        let result = set_values(&r, style);
+        restore(&r);
+        result.map(|_| format!("Track style set in {} ms", t0.elapsed().as_millis()))
+    }
+
+    fn set_values(r: &Resolve, style: &InspectorTrackStyle) -> Result<(), String> {
+        let r = r;
+        // Video tab, Track sub-tab.
         let nodes = r.nodes()?;
         if let Some(i) = nodes.iter().position(|n| n.role == "AXCheckBox" && n.title == "Video") {
             if nodes[i].value == "0" { press(&nodes[i].el); sleep(Duration::from_millis(200)); }
@@ -494,8 +529,7 @@ mod mac {
             edit_number(&r, y, |l| xy_field(&l.nodes, pos(l)?, "Y"))?;
         }
 
-        let _ = r.menu("Edit", "Deselect All");
-        Ok(format!("Track style set in {} ms", t0.elapsed().as_millis()))
+        Ok(())
     }
 
     fn set_slider<F>(r: &Resolve, locate: F, value: f64) -> Result<(), String>
