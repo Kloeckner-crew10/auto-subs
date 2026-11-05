@@ -725,14 +725,20 @@ mod mac {
         set_text(&field.el, name);
         sleep(Duration::from_millis(700));
 
-        // The first tile in the filtered list: its black thumbnail.
+        // The search also matches Fusion Titles ("Rotate In and Out"), which
+        // come first; the subtitle animations are the library's last section
+        // ("Animated"). Scroll to the end and take the last tile.
         let nodes = r.nodes()?;
         let (_, list) = find_lib(&nodes).ok_or("Effects list not found")?;
+        for _ in 0..3 {
+            r.scroll(CGPoint::new(list.x + list.w / 2.0, list.y + list.h / 2.0), -30);
+        }
+        sleep(Duration::from_millis(300));
         let (px, wpx, hpx, scale) = capture(list.x, list.y, 60.0, list.h)?;
         let colx = ((22.0 * scale) as usize).min(wpx.saturating_sub(1));
         let col: Vec<[u8; 3]> = (0..hpx).map(|y| px[y * wpx + colx]).collect();
         let tiles = runs(&col, |c| c[0] < 22 && c[1] < 22 && c[2] < 22, (10.0 * scale) as usize);
-        let (t0, t1) = *tiles.first().ok_or(format!("\"{name}\" not found in Resolve's Effects (Titles > Animated)"))?;
+        let (t0, t1) = *tiles.last().ok_or(format!("\"{name}\" not found in Resolve's Effects (Titles > Animated)"))?;
         let from = CGPoint::new(list.x + 150.0, list.y + ((t0 + t1) as f64 / 2.0) / scale);
 
         // Subtitle track header: beige strip at the timeline's left edge.
@@ -969,6 +975,17 @@ mod mac {
             } else {
                 apply_animation(&r, &style.animation)?;
                 select_caption(&r)?;
+                // The Inspector names the applied animation right before
+                // "Open In Fusion"; a different name means a wrong tile.
+                let nodes = r.nodes()?;
+                if let Some(oi) = nodes.iter().position(|n| n.role == "AXButton" && n.desc == "Open In Fusion") {
+                    let applied = nodes[..oi].iter().rev().find(|n| n.role == "AXStaticText" && !n.label().is_empty()).map(|n| n.label().to_string());
+                    if let Some(a) = applied {
+                        if !a.eq_ignore_ascii_case(&style.animation) {
+                            return Err(format!("Resolve applied \"{a}\" instead of \"{}\"", style.animation));
+                        }
+                    }
+                }
                 set_fusion_values(&r, style)
             }
         })();
