@@ -1,8 +1,7 @@
 import * as React from "react";
-import { Check, ChevronRight, Copy, MonitorPlay, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { createSubtitleStyleTrack, getTimelineResolution } from "@/api/resolve-api";
-import { writeStyleSampleSrt } from "@/utils/file-utils";
+import { getTimelineResolution } from "@/api/resolve-api";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -294,42 +293,11 @@ function SubtitleStyleDialog({
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = React.useState<SubtitleStyleDef>(structuredClone(style));
-  const [busy, setBusy] = React.useState(false);
-  const [setUpIn, setSetUpIn] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const profiles = useSettingsStore((s) => s.customerProfiles);
-  const activeProfileId = useSettingsStore((s) => s.activeProfileId);
-  const profile = getActiveProfile({ customerProfiles: profiles, activeProfileId });
   const setLook = (patch: Partial<TrackStyle>) => setDraft((d) => ({ ...d, look: { ...d.look, ...patch } }));
   const num = (v: string, fallback: number) => {
     const n = Number(v.replace(",", "."));
     return Number.isFinite(n) ? n : fallback;
   };
-  const trackName = draft.trackName ?? `AutoSubs - ${draft.name.trim() || t("trackStyles.newName")}`;
-
-  // Lay a named subtitle track with a sample caption into the timeline; the
-  // editor styles that track in Resolve's Inspector, then saves here.
-  const setUpInResolve = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const sample = colorKeywords(
-        [{ text: SAMPLE.text } as Subtitle],
-        profileKeywords(profile),
-        profile?.keywordColor ?? "#C8102E",
-      )[0].text ?? SAMPLE.text;
-      const path = await writeStyleSampleSrt(sample);
-      await createSubtitleStyleTrack(trackName, path);
-      setDraft((d) => ({ ...d, trackName }));
-      setSetUpIn(trackName);
-    } catch (err) {
-      const e = err as { message?: string; detail?: string };
-      setError([e?.message ?? String(err), e?.detail].filter(Boolean).join(": "));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -344,7 +312,6 @@ function SubtitleStyleDialog({
               value={draft.name}
               autoFocus={isNew}
               placeholder={t("trackStyles.namePlaceholder")}
-              disabled={Boolean(draft.trackName)}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </Field>
@@ -368,29 +335,14 @@ function SubtitleStyleDialog({
           </Field>
         </div>
 
-        {/* Resolve set-up: same idea as editing a Fusion preset, but the look
-            lives on a subtitle track that Resolve keeps styled. */}
-        <div className="flex gap-3 rounded-lg border bg-muted/30 p-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-background text-primary">
-            <MonitorPlay className="size-5" />
-          </div>
-          <div className="min-w-0 flex-1 space-y-2 text-xs">
-            <p className="text-sm font-medium">{t("trackStyles.resolveTitle")}</p>
-            <p className="text-muted-foreground">
-              {setUpIn
-                ? t("trackStyles.resolveDone", { track: setUpIn })
-                : draft.trackName
-                  ? t("trackStyles.resolveExisting", { track: draft.trackName })
-                  : t("trackStyles.resolveIntro")}
-            </p>
-            {error && <p className="text-destructive">{error}</p>}
-            <Button size="sm" variant="outline" disabled={busy || !draft.name.trim()} onClick={setUpInResolve}>
-              {draft.trackName ? t("trackStyles.openInResolve") : t("trackStyles.createInResolve")}
-            </Button>
-          </div>
-        </div>
+        {/* Resolve imports subtitles onto subtitle track 1 only, so a
+            subtitle-track style cannot carry its own look; that is what the
+            Fusion styles (video track) are for. */}
+        <p className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+          {t("trackStyles.oneLookHint")}
+        </p>
 
-        <Collapsible>
+        <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-xs text-muted-foreground">
             <ChevronRight className="size-3.5" />
             {t("trackStyles.previewValues")}

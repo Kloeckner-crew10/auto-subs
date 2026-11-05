@@ -5,7 +5,71 @@ const EPOCH = '1970-01-01T00:00:00.000Z';
 // Built-in presets ship empty `macroSettings` so the Fusion macro's own defaults
 // are used. Users can create custom presets that capture inspector values via
 // the `StartPresetEdit` / `CapturePresetSettings` Resolve endpoints.
+
+// crew10: Tipico captions that look like Resolve's subtitle track (Tipico
+// Medium, white, drop shadow, no animation), with players and clubs in Tipico
+// red. Built as Fusion presets so each style keeps its own look.
+const TIPICO_SUBTITLE_SETTINGS = {
+    Font: 'Tipico',
+    Style: 'Medium',
+    TextSize: 0.063,
+    TextPosition: [0.5, 0.32, 0],
+    FadeEnabled: 0,
+    PopInEnabled: 0,
+    SlideUpEnabled: 0,
+    AnimationLength: 0.2,
+    AnimationLevel: 1,
+    AnimationMode: 2,
+    HighlightExtendHorizontal: 0,
+    HighlightExtendVertical: 0,
+    HighlightRound: 0.2,
+    HighlightColorRed: 1,
+    HighlightColorGreen: 0.902,
+    HighlightColorBlue: 0.29,
+    FillEnabled: 1,
+    FillColorRed: 1,
+    FillColorGreen: 1,
+    FillColorBlue: 1,
+    OutlineEnabled: 0,
+    OutlineThickness: 0.05,
+    OutlineColorRed: 0,
+    OutlineColorGreen: 0,
+    OutlineColorBlue: 0,
+    ShadowEnabled: 1,
+    ShadowColorRed: 0,
+    ShadowColorGreen: 0,
+    ShadowColorBlue: 0,
+    HighlightStyle: 0,
+    HighlightEnabled: 0,
+    WrapEnabled: 1,
+    WrapBoxWidth: 0.78,
+    KeywordEnabled: 1,
+    KeywordColorRed: 0.784,
+    KeywordColorGreen: 0.063,
+    KeywordColorBlue: 0.18,
+};
+
 export const BUILT_IN_PRESETS: CaptionPreset[] = [
+    {
+        id: 'builtin:tipico-subtitle',
+        name: 'Tipico Untertitel',
+        description: 'Wie die Resolve-Untertitelspur: Tipico Medium, weiß, Schatten, Spieler und Vereine rot.',
+        builtIn: true,
+        version: 1,
+        createdAt: EPOCH,
+        updatedAt: EPOCH,
+        macroSettings: { ...TIPICO_SUBTITLE_SETTINGS },
+    },
+    {
+        id: 'builtin:tipico-word-highlight',
+        name: 'Tipico Wort-Highlight',
+        description: 'Tipico-Untertitel, das gesprochene Wort leuchtet gelb auf.',
+        builtIn: true,
+        version: 1,
+        createdAt: EPOCH,
+        updatedAt: EPOCH,
+        macroSettings: { ...TIPICO_SUBTITLE_SETTINGS, HighlightEnabled: 1, HighlightStyle: 0 },
+    },
     {
         id: 'builtin:chalkboard-bold',
         name: 'Chalkboard Bold',

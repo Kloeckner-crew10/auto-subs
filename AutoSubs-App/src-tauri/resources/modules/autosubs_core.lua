@@ -2071,20 +2071,25 @@ function CreateSubtitleStyleTrack(req)
     resolve:OpenPage("edit")
 
     local trackIndex = find_subtitle_track(timeline, req.trackName)
+    local created = false
     if not trackIndex then
         timeline:AddTrack("subtitle")
         trackIndex = timeline:GetTrackCount("subtitle")
         timeline:SetTrackName("subtitle", trackIndex, req.trackName)
+        created = true
     end
 
     local item, err = import_srt(req.srtPath)
     if not item then
+        if created then timeline:DeleteTrack("subtitle", trackIndex) end
         return make_error("Failed to create style track", err)
     end
     local start = timeline:GetStartFrame()
     clear_subtitle_range(timeline, trackIndex, start, start + 1)
     local appended, diag = append_srt_to_track(timeline, item, trackIndex, start)
     if not appended or #appended == 0 then
+        -- Leave no empty track behind when Resolve refuses the placement.
+        if created then timeline:DeleteTrack("subtitle", trackIndex) end
         return make_error("Failed to create style track",
             "Resolve did not place the sample caption: " .. tostring(diag))
     end

@@ -814,6 +814,7 @@
     "resolveExisting": "Dieser Stil gehört zur Spur „{{track}}“. Ändern kannst du ihn jederzeit im Inspector dieser Spur.",
     "createInResolve": "In Resolve einrichten",
     "openInResolve": "In Resolve öffnen",
-    "previewValues": "Werte für die Vorschau in AutoSubs (optional)"
+    "previewValues": "Werte für die Vorschau in AutoSubs (optional)",
+    "oneLookHint": "Die Untertitelspur hat in Resolve einen Look pro Timeline (Spur 1, im Inspector unter „Track“). Für einen eigenen Look pro Stil nimm „Ausgabe als: Video-Spur“ mit den Fusion-Stilen, z. B. „Tipico Untertitel“."
   }
 }

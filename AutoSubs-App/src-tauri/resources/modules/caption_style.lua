@@ -84,6 +84,25 @@ function caption_style.kind_of(comp, templateName)
     return "textplus"
 end
 
+--- Install the generated macro logic (macro_patch.lua) into a caption tool and
+--- store the keyword colour where that logic looks for it when the template
+--- has no Keyword* inputs. Preset values win; default is on, #C8102E.
+function caption_style.install_macro_patch(tool, settings)
+    if not tool then return end
+    local ok, patch = pcall(AutoSubs_require, "macro_patch")
+    if not ok or type(patch) ~= "table" then return end
+    for name, code in pairs(patch) do
+        tool:SetData(name, code)
+    end
+    local s = type(settings) == "table" and settings or {}
+    tool:SetData("AutoSubsKeyword", {
+        Enabled = tonumber(s.KeywordEnabled) or 1,
+        Red = tonumber(s.KeywordColorRed) or 0.784,
+        Green = tonumber(s.KeywordColorGreen) or 0.063,
+        Blue = tonumber(s.KeywordColorBlue) or 0.18,
+    })
+end
+
 --- Per-word highlight timing, as frame offsets into the caption's own comp.
 --- Each entry also carries `keyword` (true when the app flagged the word).
 function caption_style.word_timing(words, frameRate, segmentStart)
@@ -203,6 +222,10 @@ function caption_style.apply(comp, opts)
 
     local tool = comp:FindTool(AUTOSUBS_TOOL)
     local template = comp:FindTool("Template") or comp:FindToolByID("TextPlus")
+
+    -- Newer keyword-aware macro logic, installed into this clip so captions
+    -- colour keywords even when the project still holds an older template.
+    caption_style.install_macro_patch(tool, opts.settings)
 
     if opts.text ~= nil then
         if not template then
