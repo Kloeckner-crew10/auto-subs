@@ -44,7 +44,9 @@
       "resources/"
     ],
     "macOS": {
-      "minimumSystemVersion": "13.3"
+      "minimumSystemVersion": "13.3",
+      "signingIdentity": "3018C8A68B2A0B9DA64588C88FD442643D16BE7C",
+      "hardenedRuntime": false
     },
     "linux": {
       "deb": {

@@ -66,3 +66,12 @@ In Resolve dann **Workspace → Scripts → AutoSubs (Dev)** starten.
 ## Noch offen
 - Die Fusion-Untertitelvorlage (`Resolve-Integration/autosubs-macro.setting`) enthält die Stichwort-Färbung, die mitgelieferte `caption-bin.drb` ist aber noch nicht neu erzeugt. Das geht nur in Resolve: `npm run setup-resolve`, dann **Workspace → Scripts → AutoSubs - Update Caption Template** (siehe `Resolve-Integration/docs/maintainer-template-release.md`). Bestehende Projekte behalten die alte Vorlage, bis der Clip „AutoSubs Caption“ aus dem Media Pool gelöscht wird.
 - Safe-Zone-Werte sind Richtwerte aus den Plattform-Vorgaben.
+
+## Code signing (macOS)
+
+Builds are signed with the self-signed certificate "crew10 AutoSubs"
+(SHA-1 3018C8A68B2A0B9DA64588C88FD442643D16BE7C, `bundle.macOS.signingIdentity`
+in `tauri.conf.json`). A stable signature keeps the macOS Accessibility
+permission, which AutoSubs needs to set the subtitle track look in Resolve,
+across updates. The certificate and key live in the login keychain of the
+build Mac; a backup is in `~/.tauri/crew10-codesign/` (never commit it).
