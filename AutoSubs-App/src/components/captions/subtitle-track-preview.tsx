@@ -323,7 +323,8 @@ function SubtitleStyleDialog({
       setDraft((d) => ({ ...d, trackName }));
       setSetUpIn(trackName);
     } catch (err) {
-      setError(String((err as Error)?.message ?? err));
+      const e = err as { message?: string; detail?: string };
+      setError([e?.message ?? String(err), e?.detail].filter(Boolean).join(": "));
     } finally {
       setBusy(false);
     }

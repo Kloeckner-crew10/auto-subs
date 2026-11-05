@@ -1948,33 +1948,55 @@ end
 --- the clips land elsewhere they are removed and the append is retried with
 --- every other subtitle track locked.
 local function append_srt_to_track(timeline, item, trackIndex, recordFrame)
-    local function append()
-        return mediaPool:AppendToTimeline({ {
-            mediaPoolItem = item,
-            recordFrame = recordFrame,
-            trackIndex = trackIndex,
-        } })
+    local function append(withIndex)
+        local info = { mediaPoolItem = item, recordFrame = recordFrame }
+        if withIndex then info.trackIndex = trackIndex end
+        return mediaPool:AppendToTimeline({ info })
     end
-    local appended = append()
-    if appended and #appended > 0 and item_track_index(appended[1]) == trackIndex then
-        return appended
+    local function landed(appended)
+        return appended and #appended > 0 and item_track_index(appended[1]) == trackIndex
     end
-    if appended and #appended > 0 then
-        timeline:DeleteClips(appended)
+    local function discard(appended)
+        if appended and #appended > 0 then timeline:DeleteClips(appended) end
     end
-    local count = timeline:GetTrackCount("subtitle") or 0
+
+    -- Where each attempt ended up, for the error message if all fail.
+    local tried = {}
+    local function note(label, appended)
+        local where = (appended and #appended > 0) and tostring(item_track_index(appended[1])) or "none"
+        table.insert(tried, label .. "->" .. where)
+    end
+
+    -- 1) Ask for the track directly.
+    local appended = append(true)
+    note("index", appended)
+    if landed(appended) then return appended end
+    discard(appended)
+
+    -- 2) Lock every other subtitle track so Resolve has only this one left,
+    --    then append with and without an explicit index.
     local locked = {}
-    for i = 1, count do
+    for i = 1, (timeline:GetTrackCount("subtitle") or 0) do
         if i ~= trackIndex and not timeline:GetIsTrackLocked("subtitle", i) then
             timeline:SetTrackLock("subtitle", i, true)
             table.insert(locked, i)
         end
     end
-    appended = append()
+    if timeline:GetIsTrackLocked("subtitle", trackIndex) then
+        timeline:SetTrackLock("subtitle", trackIndex, false)
+    end
+    for _, withIndex in ipairs({ false, true }) do
+        appended = append(withIndex)
+        note(withIndex and "locked+index" or "locked", appended)
+        if landed(appended) then break end
+        discard(appended)
+        appended = nil
+    end
     for _, i in ipairs(locked) do
         timeline:SetTrackLock("subtitle", i, false)
     end
-    return appended
+    return appended, table.concat(tried, ", ") .. " (wanted " .. tostring(trackIndex) .. " of " ..
+        tostring(timeline:GetTrackCount("subtitle")) .. ")"
 end
 
 --- Remove clips on a subtitle track that overlap [fromFrame, toFrame).
@@ -2027,9 +2049,10 @@ function AddSubtitleTrack(req)
             start + math.ceil(req.toSec * frameRate) + 1)
     end
 
-    local appended = append_srt_to_track(timeline, item, trackIndex, start)
+    local appended, diag = append_srt_to_track(timeline, item, trackIndex, start)
     if not appended or #appended == 0 then
-        return make_error("Failed to add subtitle track", "Resolve did not place the subtitles on the timeline")
+        return make_error("Failed to add subtitle track",
+            "Resolve did not place the subtitles on the timeline: " .. tostring(diag))
     end
     return { message = "Subtitle track added", count = #appended, trackIndex = item_track_index(appended[1]) }
 end
@@ -2060,9 +2083,10 @@ function CreateSubtitleStyleTrack(req)
     end
     local start = timeline:GetStartFrame()
     clear_subtitle_range(timeline, trackIndex, start, start + 1)
-    local appended = append_srt_to_track(timeline, item, trackIndex, start)
+    local appended, diag = append_srt_to_track(timeline, item, trackIndex, start)
     if not appended or #appended == 0 then
-        return make_error("Failed to create style track", "Resolve did not place the sample caption")
+        return make_error("Failed to create style track",
+            "Resolve did not place the sample caption: " .. tostring(diag))
     end
     pcall(JumpToTime, 1.0)
     return { trackIndex = trackIndex }
