@@ -777,5 +777,11 @@
     "enableGrid": "显示网格",
     "rows": "行",
     "columns": "列"
+  },
+  "trackPreview": {
+    "label": "字幕轨道外观",
+    "explain": "字幕轨道的外观由 Resolve 的轨道样式决定，设置一次即可。",
+    "shadow": "阴影",
+    "fusionOnly": "Fusion 样式仅适用于视频轨道。"
   }
 }

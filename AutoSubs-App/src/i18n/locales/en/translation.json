@@ -797,5 +797,11 @@
     "enableGrid": "Enable Grid",
     "rows": "Rows",
     "columns": "Columns"
+  },
+  "trackPreview": {
+    "label": "Subtitle track look",
+    "explain": "On the subtitle track Resolve sets the look (Track style in the Inspector). Set it once; new subtitles inherit it.",
+    "shadow": "shadow",
+    "fusionOnly": "Fusion styles such as Chalkboard only apply to the video track."
   }
 }

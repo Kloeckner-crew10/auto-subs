@@ -777,5 +777,11 @@
     "enableGrid": "Afficher la grille",
     "rows": "Lignes",
     "columns": "Colonnes"
+  },
+  "trackPreview": {
+    "label": "Aspect de la piste de sous-titres",
+    "explain": "Sur la piste de sous-titres, Resolve définit l’aspect (style de piste). Réglez-le une fois.",
+    "shadow": "ombre",
+    "fusionOnly": "Les styles Fusion ne s’appliquent qu’à la piste vidéo."
   }
 }

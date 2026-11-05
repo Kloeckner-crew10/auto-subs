@@ -222,6 +222,24 @@ export interface SubtitleRules {
     pauseSplitSec?: number | null;
 }
 
+/**
+ * Resolve subtitle-track style, in Resolve's own units (Inspector → Track):
+ * size and shadow values as Resolve shows them for a 1080-high reference.
+ */
+export interface TrackStyle {
+    font: string;
+    fontFace: string;
+    size: number;
+    color: string;
+    shadow: boolean;
+    shadowColor: string;
+    shadowOffsetX: number;
+    shadowOffsetY: number;
+    shadowBlur: number;
+    /** 0..100 like Resolve's opacity field. */
+    shadowOpacity: number;
+}
+
 export interface CustomerProfile {
     id: string;
     name: string;
@@ -231,6 +249,8 @@ export interface CustomerProfile {
     keywords: string[];
     /** Hex colour for keywords on Resolve's subtitle track, e.g. "#be1825". */
     keywordColor?: string;
+    /** Look of Resolve's subtitle track for this customer (set once in Resolve). */
+    trackStyle?: TrackStyle;
     replacements: WordReplacement[];
     minDurationSec: number | null;
     maxDurationSec: number | null;

@@ -777,5 +777,11 @@
     "enableGrid": "Raster anzeigen",
     "rows": "Zeilen",
     "columns": "Spalten"
+  },
+  "trackPreview": {
+    "label": "So sieht die Untertitelspur aus",
+    "explain": "Auf der Untertitelspur bestimmt Resolve den Look (Spur-Stil im Inspector). Stell ihn einmal so ein, neue Untertitel übernehmen ihn.",
+    "shadow": "Schatten",
+    "fusionOnly": "Fusion-Stile wie Chalkboard gelten nur für die Video-Spur."
   }
 }

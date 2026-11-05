@@ -94,6 +94,7 @@ export function OutputPanel({
   const { subtitles, speakers, updateSpeakers, currentSubtitleDocumentFilename } =
     useSubtitleDocument();
 
+  const outputTarget = useSettingsStore((s) => s.outputTarget);
   const { captionStyle, selectedOutputTrack } = useSettingsStore(
     useShallow((s) => ({
       captionStyle: s.captionStyle,
@@ -394,7 +395,9 @@ export function OutputPanel({
           )}
 
           <div className="flex flex-wrap justify-end gap-2 p-3">
-            {editorConnected && isResolve && expanded && !closing && (
+            {/* Restyling works on Fusion caption clips only; the subtitle
+                track has none, so the button would only report an error. */}
+            {editorConnected && isResolve && expanded && !closing && outputTarget !== "subtitle" && (
               <Button
                 type="button"
                 variant="outline"

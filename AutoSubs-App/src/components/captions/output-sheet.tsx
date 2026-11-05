@@ -1,3 +1,4 @@
+import { SubtitleTrackPreview } from "@/components/captions/subtitle-track-preview";
 import { SafeZoneSection } from "@/components/captions/safe-zone-section";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import type { OutputTarget } from "@/types";
@@ -190,7 +191,10 @@ export function OutputSheet({
 
             {/* Style last: it is the only section that grows, so it owns the
                 page scroll instead of fighting a nested one. */}
-            {showCaptionStyle && (
+            {isResolveOutput && outputTarget !== "video" && <SubtitleTrackPreview />}
+
+            {/* Fusion styles only apply to captions on a video track. */}
+            {showCaptionStyle && outputTarget !== "subtitle" && (
               <div ref={styleRef}>
                 <CaptionStyleSection
                   captionStyle={captionStyle}

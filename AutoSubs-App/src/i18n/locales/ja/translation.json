@@ -777,5 +777,11 @@
     "enableGrid": "グリッドを表示",
     "rows": "行",
     "columns": "列"
+  },
+  "trackPreview": {
+    "label": "字幕トラックの見た目",
+    "explain": "字幕トラックの見た目はResolveのトラックスタイルで決まります。一度設定すれば引き継がれます。",
+    "shadow": "影",
+    "fusionOnly": "Fusionスタイルはビデオトラックのみに適用されます。"
   }
 }

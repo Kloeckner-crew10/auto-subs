@@ -1,4 +1,4 @@
-import type { CustomerProfile } from "@/types";
+import type { CustomerProfile, TrackStyle } from "@/types";
 
 /**
  * Customer profiles offered once on first start. They are ordinary profiles
@@ -54,6 +54,20 @@ const TIPICO_PLAYERS = [
   "Leroy Sané", "Sané",
 ];
 
+/** Tipico subtitle track as set up in Resolve (Inspector → Track). */
+export const TIPICO_TRACK_STYLE: TrackStyle = {
+  font: "Tipico",
+  fontFace: "Medium",
+  size: 38,
+  color: "#ffffff",
+  shadow: true,
+  shadowColor: "#000000",
+  shadowOffsetX: 25,
+  shadowOffsetY: -25,
+  shadowBlur: 7,
+  shadowOpacity: 75,
+};
+
 export const BUILT_IN_PROFILES: CustomerProfile[] = [
   {
     id: "builtin:tipico",
@@ -61,6 +75,7 @@ export const BUILT_IN_PROFILES: CustomerProfile[] = [
     presetId: null,
     keywords: [...TIPICO_PLAYERS, ...TIPICO_CLUBS],
     keywordColor: "#C8102E",
+    trackStyle: TIPICO_TRACK_STYLE,
     replacements: [
       { from: "Ballak", to: "Ballack" },
       { from: "Balak", to: "Ballack" },

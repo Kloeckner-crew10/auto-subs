@@ -777,5 +777,11 @@
     "enableGrid": "Mostrar cuadrícula",
     "rows": "Filas",
     "columns": "Columnas"
+  },
+  "trackPreview": {
+    "label": "Aspecto de la pista de subtítulos",
+    "explain": "En la pista de subtítulos Resolve define el aspecto (estilo de pista). Ajústalo una vez.",
+    "shadow": "sombra",
+    "fusionOnly": "Los estilos Fusion solo se aplican a la pista de vídeo."
   }
 }

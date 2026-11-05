@@ -1,5 +1,5 @@
 import { DEFAULT_SAFE_ZONE_SETTINGS } from "@/lib/safe-zones";
-import { BUILT_IN_PROFILES } from "@/presets/built-in-profiles";
+import { BUILT_IN_PROFILES, TIPICO_TRACK_STYLE } from "@/presets/built-in-profiles";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { platform } from "@tauri-apps/plugin-os";
@@ -118,6 +118,9 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
   // Tipico red changed from #be1825 to #C8102E after the profile was first seeded.
   const profiles = (next.customerProfiles ?? []).map((p) =>
     p.id === "builtin:tipico" && p.keywordColor === "#be1825" ? { ...p, keywordColor: "#C8102E" } : p,
+  ).map((p) =>
+    // Track style added after the Tipico profile was first seeded.
+    p.id === "builtin:tipico" && !p.trackStyle ? { ...p, trackStyle: TIPICO_TRACK_STYLE } : p,
   );
   for (const profile of BUILT_IN_PROFILES) {
     if (seeded.has(profile.id)) continue;
