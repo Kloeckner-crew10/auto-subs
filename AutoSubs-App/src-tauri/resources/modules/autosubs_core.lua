@@ -767,6 +767,9 @@ function GetExportProgress()
             -- and restore the user's pre-export render configuration.
             reset_tracks()
             cleanup_render_job()
+            -- Restoring the render settings can leave Resolve on the Deliver
+            -- page; the user continues on the Edit page.
+            pcall(function() resolve:OpenPage("edit") end)
 
             if currentExportJob.cancelled then
                 return {
@@ -2101,11 +2104,23 @@ end
 --- Lock every video and audio track that is not locked yet, so that
 --- Edit > Select All in Resolve picks only subtitle clips. Returns the tracks
 --- it locked; UnlockTracks gives them back.
+-- Tracks AutoSubs locked and has not unlocked yet (survives a failed or
+-- interrupted unlock so the next call can still give them back).
+local pendingStyleLocks = {}
+
+local function unlock_list(timeline, list)
+    for _, t in ipairs(list or {}) do
+        pcall(function() timeline:SetTrackLock(t.kind, tonumber(t.index), false) end)
+    end
+end
+
 function LockNonSubtitleTracks()
     refresh_project()
     local timeline = project:GetCurrentTimeline()
     if not timeline then return make_error("Failed to lock tracks", "No active timeline in Resolve") end
     resolve:OpenPage("edit")
+    unlock_list(timeline, pendingStyleLocks)
+    pendingStyleLocks = {}
     local locked = {}
     for _, kind in ipairs({ "video", "audio" }) do
         for i = 1, (timeline:GetTrackCount(kind) or 0) do
@@ -2130,6 +2145,7 @@ function LockNonSubtitleTracks()
             timeline:GetSetting("timelineDropFrameTimecode"))
         pcall(function() timeline:SetCurrentTimecode(tc) end)
     end
+    pendingStyleLocks = locked
     return { locked = locked, timecode = savedTimecode }
 end
 
@@ -2137,9 +2153,9 @@ function UnlockTracks(req)
     refresh_project()
     local timeline = project:GetCurrentTimeline()
     if not timeline then return { ok = false } end
-    for _, t in ipairs(req.locked or {}) do
-        pcall(function() timeline:SetTrackLock(t.kind, tonumber(t.index), false) end)
-    end
+    unlock_list(timeline, req.locked)
+    unlock_list(timeline, pendingStyleLocks)
+    pendingStyleLocks = {}
     if req.timecode then
         pcall(function() timeline:SetCurrentTimecode(req.timecode) end)
     end
