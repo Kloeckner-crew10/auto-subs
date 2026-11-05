@@ -30,6 +30,7 @@ mod transcript_types;
 mod logging;
 mod resolve_bridge;
 mod keywords;
+mod font_files;
 mod resolve_scripts;
 mod resolve_launcher;
 mod adobe_bridge;
@@ -692,6 +693,7 @@ fn main() {
             transcription_api::ensure_models,
             transcription_api::cancel_transcription,
             transcription_api::reformat_subtitles,
+            font_files::read_font_file,
             transcription_api::density_char_limits,
             models::get_downloaded_models,
             models::delete_model,

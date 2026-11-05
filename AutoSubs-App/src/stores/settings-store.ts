@@ -1,3 +1,4 @@
+import { DEFAULT_SAFE_ZONE_SETTINGS } from "@/lib/safe-zones";
 import { BUILT_IN_PROFILES } from "@/presets/built-in-profiles";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -82,7 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
   // Output
   outputTarget: "video",
-  safeZonePlatform: null,
+  safeZone: DEFAULT_SAFE_ZONE_SETTINGS,
 
   // Double proof
   proofModel: null,

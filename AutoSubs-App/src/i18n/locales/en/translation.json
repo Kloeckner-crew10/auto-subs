@@ -769,7 +769,7 @@
     "dismiss": "Dismiss"
   },
   "safeZone": {
-    "label": "Platform / safe zone",
+    "label": "Safe zone / overlay",
     "none": "None",
     "position": "Subtitle bottom edge about {{y}} px from the bottom ({{percent}} %), timeline {{width}}×{{height}}.",
     "noResolution": "Reading timeline resolution…",
@@ -780,6 +780,22 @@
     "removeHint": "Remove it with “Remove guide” before export.",
     "partial": "The guide does not cover the whole timeline.",
     "removed": "Safe-zone guide removed",
-    "failed": "Safe zone failed"
+    "failed": "Safe zone failed",
+    "maxWidth": "Max width {{width}} px.",
+    "useSuggested": "Use {{name}}",
+    "groups": {
+      "safeZone": "Safe Zone",
+      "icons": "Icons",
+      "grid": "Grid"
+    },
+    "enableSafeZone": "Enable Safe Zone",
+    "template": "Template",
+    "opacity": "Opacity",
+    "enableIcons": "Enable Icons",
+    "platform": "Platform",
+    "iconsVerticalOnly": "Icons are only available for 9:16.",
+    "enableGrid": "Enable Grid",
+    "rows": "Rows",
+    "columns": "Columns"
   }
 }

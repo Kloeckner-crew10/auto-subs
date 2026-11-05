@@ -1,3 +1,4 @@
+import type { SafeZoneSettings } from "@/lib/safe-zones";
 import { SupportedUiLanguage } from '@/i18n';
 import { Integration } from '@/contexts/IntegrationContext';
 
@@ -186,8 +187,8 @@ export interface Settings {
 
     /** What "Send to timeline" puts down: Fusion captions, Resolve's subtitle track, or both. */
     outputTarget: OutputTarget;
-    /** Platform whose safe zone the send panel shows; null = none. */
-    safeZonePlatform: string | null;
+    /** Safe-zone overlay controls (same as the VisibleZone plugin). */
+    safeZone: SafeZoneSettings;
 
     // Double proof: a second model re-listens and votes on spelling.
     proofModel: number | null; // index into the models array, null = off

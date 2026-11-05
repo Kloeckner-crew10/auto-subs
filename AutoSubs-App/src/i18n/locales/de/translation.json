@@ -749,7 +749,7 @@
     "dismiss": "Verwerfen"
   },
   "safeZone": {
-    "label": "Plattform / Safe Zone",
+    "label": "Safe Zone / Overlay",
     "none": "Keine",
     "position": "Untertitel-Unterkante ca. {{y}} px von unten ({{percent}} %), Timeline {{width}}×{{height}}.",
     "noResolution": "Auflösung der Timeline wird gelesen…",
@@ -760,6 +760,22 @@
     "removeHint": "Vor dem Export mit „Raster entfernen“ löschen.",
     "partial": "Raster deckt nicht die ganze Timeline ab.",
     "removed": "Safe-Zone-Raster entfernt",
-    "failed": "Safe Zone fehlgeschlagen"
+    "failed": "Safe Zone fehlgeschlagen",
+    "maxWidth": "Breite max. {{width}} px.",
+    "useSuggested": "{{name}} verwenden",
+    "groups": {
+      "safeZone": "Safe Zone",
+      "icons": "Icons",
+      "grid": "Raster"
+    },
+    "enableSafeZone": "Safe Zone anzeigen",
+    "template": "Vorlage",
+    "opacity": "Deckkraft",
+    "enableIcons": "Icons anzeigen",
+    "platform": "Plattform",
+    "iconsVerticalOnly": "Icons gibt es nur für 9:16.",
+    "enableGrid": "Raster anzeigen",
+    "rows": "Zeilen",
+    "columns": "Spalten"
   }
 }

@@ -749,7 +749,7 @@
     "dismiss": "무시"
   },
   "safeZone": {
-    "label": "플랫폼 / 세이프 존",
+    "label": "세이프 존 / 오버레이",
     "none": "없음",
     "position": "자막 아래쪽은 아래에서 약 {{y}}px ({{percent}}%), 타임라인 {{width}}×{{height}}.",
     "noResolution": "해상도 읽는 중…",
@@ -760,6 +760,22 @@
     "removeHint": "내보내기 전에 제거하세요.",
     "partial": "가이드가 타임라인 전체를 덮지 않습니다.",
     "removed": "가이드 제거됨",
-    "failed": "세이프 존 실패"
+    "failed": "세이프 존 실패",
+    "maxWidth": "최대 너비 {{width}} px.",
+    "useSuggested": "{{name}} 사용",
+    "groups": {
+      "safeZone": "세이프 존",
+      "icons": "아이콘",
+      "grid": "그리드"
+    },
+    "enableSafeZone": "세이프 존 표시",
+    "template": "템플릿",
+    "opacity": "불투명도",
+    "enableIcons": "아이콘 표시",
+    "platform": "플랫폼",
+    "iconsVerticalOnly": "아이콘은 9:16 전용입니다.",
+    "enableGrid": "그리드 표시",
+    "rows": "행",
+    "columns": "열"
   }
 }

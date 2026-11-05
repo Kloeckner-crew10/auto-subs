@@ -749,7 +749,7 @@
     "dismiss": "忽略"
   },
   "safeZone": {
-    "label": "平台 / 安全区",
+    "label": "安全区 / 叠加层",
     "none": "无",
     "position": "字幕底边约距底部 {{y}} px（{{percent}}%），时间线 {{width}}×{{height}}。",
     "noResolution": "正在读取分辨率…",
@@ -760,6 +760,22 @@
     "removeHint": "导出前请移除。",
     "partial": "参考线未覆盖整个时间线。",
     "removed": "已移除参考线",
-    "failed": "安全区失败"
+    "failed": "安全区失败",
+    "maxWidth": "最大宽度 {{width}} px。",
+    "useSuggested": "使用 {{name}}",
+    "groups": {
+      "safeZone": "安全区",
+      "icons": "图标",
+      "grid": "网格"
+    },
+    "enableSafeZone": "显示安全区",
+    "template": "模板",
+    "opacity": "不透明度",
+    "enableIcons": "显示图标",
+    "platform": "平台",
+    "iconsVerticalOnly": "图标仅适用于 9:16。",
+    "enableGrid": "显示网格",
+    "rows": "行",
+    "columns": "列"
   }
 }

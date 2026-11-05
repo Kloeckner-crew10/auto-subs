@@ -749,7 +749,7 @@
     "dismiss": "却下"
   },
   "safeZone": {
-    "label": "プラットフォーム / セーフゾーン",
+    "label": "セーフゾーン / オーバーレイ",
     "none": "なし",
     "position": "字幕の下端は下から約{{y}}px（{{percent}}%）、タイムライン{{width}}×{{height}}。",
     "noResolution": "解像度を取得中…",
@@ -760,6 +760,22 @@
     "removeHint": "書き出し前に削除してください。",
     "partial": "ガイドがタイムライン全体を覆っていません。",
     "removed": "ガイドを削除しました",
-    "failed": "セーフゾーンに失敗"
+    "failed": "セーフゾーンに失敗",
+    "maxWidth": "最大幅 {{width}} px。",
+    "useSuggested": "{{name}}を使用",
+    "groups": {
+      "safeZone": "セーフゾーン",
+      "icons": "アイコン",
+      "grid": "グリッド"
+    },
+    "enableSafeZone": "セーフゾーンを表示",
+    "template": "テンプレート",
+    "opacity": "不透明度",
+    "enableIcons": "アイコンを表示",
+    "platform": "プラットフォーム",
+    "iconsVerticalOnly": "アイコンは9:16のみ。",
+    "enableGrid": "グリッドを表示",
+    "rows": "行",
+    "columns": "列"
   }
 }

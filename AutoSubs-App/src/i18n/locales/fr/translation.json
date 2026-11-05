@@ -749,7 +749,7 @@
     "dismiss": "Ignorer"
   },
   "safeZone": {
-    "label": "Plateforme / zone sûre",
+    "label": "Zone sûre / overlay",
     "none": "Aucune",
     "position": "Bas des sous-titres à env. {{y}} px du bas ({{percent}} %), timeline {{width}}×{{height}}.",
     "noResolution": "Lecture de la résolution…",
@@ -760,6 +760,22 @@
     "removeHint": "Retirez-le avant l’export.",
     "partial": "Le guide ne couvre pas toute la timeline.",
     "removed": "Guide retiré",
-    "failed": "Échec de la zone sûre"
+    "failed": "Échec de la zone sûre",
+    "maxWidth": "Largeur max. {{width}} px.",
+    "useSuggested": "Utiliser {{name}}",
+    "groups": {
+      "safeZone": "Zone sûre",
+      "icons": "Icônes",
+      "grid": "Grille"
+    },
+    "enableSafeZone": "Afficher la zone sûre",
+    "template": "Modèle",
+    "opacity": "Opacité",
+    "enableIcons": "Afficher les icônes",
+    "platform": "Plateforme",
+    "iconsVerticalOnly": "Icônes uniquement en 9:16.",
+    "enableGrid": "Afficher la grille",
+    "rows": "Lignes",
+    "columns": "Colonnes"
   }
 }
