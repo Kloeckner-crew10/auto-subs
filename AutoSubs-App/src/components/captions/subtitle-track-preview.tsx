@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { getTimelineResolution } from "@/api/resolve-api";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,6 +27,8 @@ import { loadPresetFont } from "@/lib/preset-fonts";
 import { TIPICO_TRACK_STYLE } from "@/presets/built-in-profiles";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
+import { fullTrackStyle } from "@/lib/track-style";
+import { TrackInspectorEditor } from "@/components/captions/track-inspector-editor";
 import type { Subtitle, SubtitleStyleDef, TrackStyle } from "@/types";
 
 const SAMPLE_WORDS = ["Lennart Karl", "trifft", "für", "Bayern München"];
@@ -246,30 +247,59 @@ function TrackPreviewBox({ style }: { style: SubtitleStyleDef }) {
   // Calibrated against Resolve's viewer: size 38 on a 1920-high frame is
   // about 4 % of the frame height; shadow fields are in tenths of that unit.
   const unit = (frameH / 1080) * 1.2;
-  const shadow = look.shadow
-    ? `${look.shadowOffsetX * 0.1 * unit}px ${-look.shadowOffsetY * 0.1 * unit}px ${look.shadowBlur * 0.1 * unit}px ${hexToRgba(look.shadowColor, look.shadowOpacity / 100)}`
+  const full = fullTrackStyle(look);
+  const shadow = full.shadow
+    ? `${full.shadowOffsetX * 0.1 * unit}px ${-full.shadowOffsetY * 0.1 * unit}px ${full.shadowBlur * 0.1 * unit}px ${hexToRgba(full.shadowColor, (full.shadowOpacity / 100) * (full.opacity / 100))}`
     : undefined;
+  // Resolve measures Position from the bottom-left of the frame.
+  const bottomPct = (full.positionY / frame.height) * 100;
+  const shiftPct = (full.positionX / frame.width - 0.5) * 100;
+  const textTransform =
+    full.fontCase === "All Caps" ? "uppercase" : full.fontCase === "All Lowercase" ? "lowercase" : full.fontCase === "Title Caps" ? "capitalize" : undefined;
 
   return (
     <div className="flex h-[190px] items-center justify-center bg-neutral-900">
       <div className="relative h-full overflow-hidden bg-neutral-800" style={{ width: frameW }}>
         <div
-          className="absolute inset-x-0 text-center"
+          className="absolute inset-x-0"
           style={{
-            top: "62%",
+            bottom: `${bottomPct}%`,
+            transform: `translate(${shiftPct}%, 50%) scale(${full.zoomX}, ${full.zoomY})`,
             padding: "0 6%",
-            fontFamily: `${fontFamily ? `"${fontFamily}", ` : ""}"${look.font}", -apple-system, Helvetica, sans-serif`,
-            fontSize: look.size * unit,
-            lineHeight: 1.2,
-            color: look.color,
+            textAlign: full.alignment === "justify" ? "justify" : full.alignment,
+            fontFamily: `${fontFamily ? `"${fontFamily}", ` : ""}"${full.font}", -apple-system, Helvetica, sans-serif`,
+            fontSize: full.size * unit,
+            lineHeight: 1.2 + full.lineSpacing / 100,
+            letterSpacing: `${full.kerning / 100}em`,
+            fontVariant: full.fontCase === "Small Caps" ? "small-caps" : undefined,
+            textTransform,
+            color: full.color,
+            opacity: full.opacity / 100,
             textShadow: shadow,
+            WebkitTextStroke: full.strokeSize > 0 ? `${full.strokeSize * 0.1 * unit}px ${full.strokeColor}` : undefined,
+            paintOrder: full.strokeOutsideOnly ? "stroke fill" : undefined,
           }}
         >
+          <span
+            style={
+              full.background
+                ? {
+                    background: hexToRgba(full.backgroundColor, full.backgroundOpacity / 100),
+                    outline: full.backgroundOutlineWidth > 0 ? `${full.backgroundOutlineWidth * 0.1 * unit}px solid ${full.backgroundOutlineColor}` : undefined,
+                    borderRadius: `${full.backgroundCornerRadius * 100}%`,
+                    padding: "0 0.25em",
+                    boxDecorationBreak: "clone",
+                    WebkitBoxDecorationBreak: "clone",
+                  }
+                : undefined
+            }
+          >
           {runs.map((r, i) => (
             <span key={i} style={r.color ? { color: r.color } : undefined}>
               {r.text}
             </span>
           ))}
+          </span>
         </div>
       </div>
     </div>
@@ -294,10 +324,6 @@ function SubtitleStyleDialog({
   const { t } = useTranslation();
   const [draft, setDraft] = React.useState<SubtitleStyleDef>(structuredClone(style));
   const setLook = (patch: Partial<TrackStyle>) => setDraft((d) => ({ ...d, look: { ...d.look, ...patch } }));
-  const num = (v: string, fallback: number) => {
-    const n = Number(v.replace(",", "."));
-    return Number.isFinite(n) ? n : fallback;
-  };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -351,45 +377,7 @@ function SubtitleStyleDialog({
             <div className="overflow-hidden rounded-lg border">
               <TrackPreviewBox style={draft} />
             </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <Field label={t("trackStyles.font")}>
-                <Input value={draft.look.font} onChange={(e) => setLook({ font: e.target.value })} />
-              </Field>
-              <Field label={t("trackStyles.fontFace")}>
-                <Input value={draft.look.fontFace} onChange={(e) => setLook({ fontFace: e.target.value })} />
-              </Field>
-              <Field label={t("trackStyles.size")}>
-                <Input inputMode="decimal" value={draft.look.size} onChange={(e) => setLook({ size: num(e.target.value, draft.look.size) })} />
-              </Field>
-              <Field label={t("trackStyles.color")}>
-                <ColorInput value={draft.look.color} onChange={(v) => setLook({ color: v })} />
-              </Field>
-              <Field label={t("trackPreview.shadow")} wide>
-                <label className="flex items-center gap-2">
-                  <Checkbox checked={draft.look.shadow} onCheckedChange={(v) => setLook({ shadow: v === true })} />
-                  {t("trackStyles.shadowOn")}
-                </label>
-              </Field>
-              {draft.look.shadow && (
-                <>
-                  <Field label={t("trackStyles.shadowColor")}>
-                    <ColorInput value={draft.look.shadowColor} onChange={(v) => setLook({ shadowColor: v })} />
-                  </Field>
-                  <Field label={t("trackStyles.shadowOpacity")}>
-                    <Input inputMode="decimal" value={draft.look.shadowOpacity} onChange={(e) => setLook({ shadowOpacity: num(e.target.value, draft.look.shadowOpacity) })} />
-                  </Field>
-                  <Field label={t("trackStyles.offsetX")}>
-                    <Input inputMode="decimal" value={draft.look.shadowOffsetX} onChange={(e) => setLook({ shadowOffsetX: num(e.target.value, draft.look.shadowOffsetX) })} />
-                  </Field>
-                  <Field label={t("trackStyles.offsetY")}>
-                    <Input inputMode="decimal" value={draft.look.shadowOffsetY} onChange={(e) => setLook({ shadowOffsetY: num(e.target.value, draft.look.shadowOffsetY) })} />
-                  </Field>
-                  <Field label={t("trackStyles.blur")}>
-                    <Input inputMode="decimal" value={draft.look.shadowBlur} onChange={(e) => setLook({ shadowBlur: num(e.target.value, draft.look.shadowBlur) })} />
-                  </Field>
-                </>
-              )}
-            </div>
+            <TrackInspectorEditor look={draft.look} onChange={setLook} />
           </CollapsibleContent>
         </Collapsible>
 

@@ -816,6 +816,9 @@
     "openInResolve": "Open in Resolve",
     "previewValues": "AutoSubs aplica estos valores en Resolve al enviar (Inspector → Track). macOS pide acceso de Accesibilidad la primera vez.",
     "oneLookHint": "Resolve gives the subtitle track one look per timeline (track 1, Inspector → Track). For a separate look per style use “Output as: Video track” with the Fusion styles, e.g. “Tipico Untertitel”.",
-    "applyFailed": "Estilo de pista no aplicado"
+    "applyFailed": "Estilo de pista no aplicado",
+    "inspectorHint": "Mismo orden y nombres que en Resolve (Inspector → Track). AutoSubs lo aplica todo al enviar.",
+    "searchFont": "Buscar fuente…",
+    "noFont": "Ninguna fuente"
   }
 }

@@ -81,8 +81,8 @@ core-foundation = "0.10"
 core-graphics = { version = "0.25", features = ["highsierra", "elcapitan"] }
 # Runtime override of NSWindow `zoom:` (see `install_smooth_zoom`).
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSGeometry"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWindow", "NSScreen", "NSAnimation", "NSAnimationContext", "NSResponder", "NSGraphics"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSGeometry", "NSArray", "NSString"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWindow", "NSScreen", "NSAnimation", "NSAnimationContext", "NSResponder", "NSGraphics", "NSFontManager"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.55"

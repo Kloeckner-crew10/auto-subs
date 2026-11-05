@@ -271,7 +271,8 @@ export async function applySubtitleTrackLook(look: import('@/types').TrackStyle)
   const lockRes = await callResolve({ func: 'LockNonSubtitleTracks' });
   throwIfError(lockRes, 'LockNonSubtitleTracks');
   try {
-    return await invoke<string>('apply_resolve_track_style', { style: look });
+    const { fullTrackStyle } = await import('@/lib/track-style');
+    return await invoke<string>('apply_resolve_track_style', { style: fullTrackStyle(look) });
   } finally {
     await callResolve({ func: 'UnlockTracks', locked: lockRes?.locked ?? [], timecode: lockRes?.timecode }).catch(() => {});
   }

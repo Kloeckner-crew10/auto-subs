@@ -816,6 +816,9 @@
     "openInResolve": "Open in Resolve",
     "previewValues": "전송 시 AutoSubs가 Resolve에 이 값을 설정합니다(인스펙터 → Track). 처음에는 macOS가 손쉬운 사용 권한을 요청합니다.",
     "oneLookHint": "Resolve gives the subtitle track one look per timeline (track 1, Inspector → Track). For a separate look per style use “Output as: Video track” with the Fusion styles, e.g. “Tipico Untertitel”.",
-    "applyFailed": "트랙 스타일 미적용"
+    "applyFailed": "트랙 스타일 미적용",
+    "inspectorHint": "Resolve(인스펙터 → Track)와 같은 순서와 이름입니다. 전송 시 AutoSubs가 모두 적용합니다.",
+    "searchFont": "글꼴 검색…",
+    "noFont": "글꼴 없음"
   }
 }

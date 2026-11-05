@@ -696,6 +696,7 @@ fn main() {
             transcription_api::cancel_transcription,
             transcription_api::reformat_subtitles,
             font_files::read_font_file,
+            font_files::list_system_fonts,
             resolve_inspector::apply_resolve_track_style,
             transcription_api::density_char_limits,
             models::get_downloaded_models,

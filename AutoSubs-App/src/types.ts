@@ -269,7 +269,33 @@ export interface TrackStyle {
     positionX?: number;
     positionY?: number;
     strokeSize?: number;
+    // The rest mirrors Resolve's Inspector > Track; missing = Resolve default.
+    lineSpacing?: number;
+    kerning?: number;
+    fontCase?: FontCase;
+    alignment?: "left" | "center" | "right" | "justify";
+    strokeColor?: string;
+    strokeOutsideOnly?: boolean;
+    zoomX?: number;
+    zoomY?: number;
+    opacity?: number;
+    anchorV?: "top" | "middle" | "bottom";
+    anchorH?: "left" | "center" | "right";
+    background?: boolean;
+    backgroundColor?: string;
+    backgroundOutlineColor?: string;
+    backgroundOutlineWidth?: number;
+    backgroundCornerRadius?: number;
+    backgroundOpacity?: number;
+    backgroundOverrideSizing?: boolean;
+    subtitleSettings?: boolean;
+    useProjectSettings?: boolean;
+    maxLineLength?: number;
+    minDuration?: number;
+    maxCps?: number;
 }
+
+export type FontCase = "Mixed" | "All Caps" | "All Lowercase" | "Small Caps" | "Title Caps";
 
 export interface CustomerProfile {
     id: string;

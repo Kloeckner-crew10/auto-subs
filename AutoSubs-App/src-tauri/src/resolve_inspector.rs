@@ -13,20 +13,65 @@
 
 use serde::Deserialize;
 
+/// Every field of Resolve's Inspector > Track. The app sends the full set
+/// (missing values filled with Resolve's defaults).
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct InspectorTrackStyle {
     pub font: String,
     pub font_face: String,
+    pub color: String,
     pub size: f64,
+    pub line_spacing: f64,
+    pub kerning: f64,
+    pub font_case: String,
+    pub alignment: String,
+    pub stroke_color: String,
+    pub stroke_size: f64,
+    pub stroke_outside_only: bool,
+    pub position_x: f64,
+    pub position_y: f64,
+    pub zoom_x: f64,
+    pub zoom_y: f64,
+    pub opacity: f64,
+    pub anchor_v: String,
+    pub anchor_h: String,
     pub shadow: bool,
+    pub shadow_color: String,
     pub shadow_offset_x: f64,
     pub shadow_offset_y: f64,
     pub shadow_blur: f64,
     pub shadow_opacity: f64,
-    pub position_x: Option<f64>,
-    pub position_y: Option<f64>,
-    pub stroke_size: Option<f64>,
+    pub background: bool,
+    pub background_color: String,
+    pub background_outline_color: String,
+    pub background_outline_width: f64,
+    pub background_corner_radius: f64,
+    pub background_opacity: f64,
+    pub background_override_sizing: bool,
+    pub subtitle_settings: bool,
+    pub use_project_settings: bool,
+    pub max_line_length: f64,
+    pub min_duration: f64,
+    pub max_cps: f64,
+}
+
+impl Default for InspectorTrackStyle {
+    fn default() -> Self {
+        Self {
+            font: "Open Sans".into(), font_face: "Semibold".into(), color: "#ffffff".into(),
+            size: 58.0, line_spacing: 0.0, kerning: 0.0, font_case: "Mixed".into(), alignment: "center".into(),
+            stroke_color: "#ffffff".into(), stroke_size: 1.0, stroke_outside_only: false,
+            position_x: 1080.0, position_y: 768.0, zoom_x: 1.0, zoom_y: 1.0, opacity: 100.0,
+            anchor_v: "middle".into(), anchor_h: "center".into(),
+            shadow: false, shadow_color: "#000000".into(), shadow_offset_x: 0.0, shadow_offset_y: 0.0,
+            shadow_blur: 20.0, shadow_opacity: 75.0,
+            background: false, background_color: "#000000".into(), background_outline_color: "#000000".into(),
+            background_outline_width: 0.0, background_corner_radius: 0.01, background_opacity: 50.0,
+            background_override_sizing: false,
+            subtitle_settings: true, use_project_settings: true, max_line_length: 60.0, min_duration: 3.0, max_cps: 30.0,
+        }
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -275,6 +320,19 @@ mod mac {
             Ok(())
         }
 
+        fn click(&self, p: CGPoint) -> Result<(), String> {
+            if !self.is_front() {
+                return Err("DaVinci Resolve lost focus; style not finished".into());
+            }
+            let src = CGEventSource::new(CGEventSourceStateID::HIDSystemState).unwrap();
+            for t in [CGEventType::LeftMouseDown, CGEventType::LeftMouseUp] {
+                let e = CGEvent::new_mouse_event(src.clone(), t, p, CGMouseButton::Left).map_err(|_| "mouse event")?;
+                e.post(CGEventTapLocation::HID);
+                sleep(Duration::from_millis(20));
+            }
+            Ok(())
+        }
+
         fn scroll(&self, p: CGPoint, lines: i32) {
             let src = CGEventSource::new(CGEventSourceStateID::HIDSystemState).unwrap();
             if let Ok(m) = CGEvent::new_mouse_event(src.clone(), CGEventType::MouseMoved, p, CGMouseButton::Left) {
@@ -451,8 +509,169 @@ mod mac {
         result.map(|_| format!("Track style set in {} ms", t0.elapsed().as_millis()))
     }
 
-    fn set_values(r: &Resolve, style: &InspectorTrackStyle) -> Result<(), String> {
-        let r = r;
+    const SECTIONS: [&str; 7] = ["Character", "Transform", "Stroke", "Style and Position", "Drop Shadow", "Background", "Subtitle Settings"];
+
+    /// Index range of a Inspector section. Accessibility lists a section's
+    /// controls first and its title last, sections in SECTIONS order.
+    fn sec(l: &Layout, name: &str) -> Option<(usize, usize)> {
+        let upto = (l.end + 1).min(l.nodes.len());
+        let pos = |n: &str| find_label(&l.nodes, l.start, upto, n);
+        let me = pos(name)?;
+        let k = SECTIONS.iter().position(|s| *s == name)?;
+        let from = SECTIONS[..k].iter().rev().find_map(|s| pos(s)).unwrap_or(l.start);
+        Some((from, me))
+    }
+
+    fn in_sec(l: &Layout, section: &str, label: &str) -> Option<usize> {
+        let (a, b) = sec(l, section)?;
+        find_label(&l.nodes, a, b, label)
+    }
+
+    fn slider_in(r: &Resolve, section: &'static str, label: &'static str, value: f64, scale: f64) -> Result<(), String> {
+        set_slider(r, move |l| before(&l.nodes, in_sec(l, section, label)?, "AXSlider"), value, scale)
+            .map_err(|e| format!("{section} > {label}: {e}"))
+    }
+
+    fn xy_in(r: &Resolve, section: &'static str, label: &'static str, x: f64, y: f64) -> Result<(), String> {
+        edit_number(r, x, move |l| xy_field(&l.nodes, in_sec(l, section, label)?, "X"))?;
+        edit_number(r, y, move |l| xy_field(&l.nodes, in_sec(l, section, label)?, "Y"))
+    }
+
+    /// Section on/off switch: the checkbox right before the section title.
+    fn section_toggle(r: &Resolve, section: &str, on: bool) -> Result<(), String> {
+        let l = layout(r)?;
+        let (_, t) = sec(&l, section).ok_or(format!("{section} not found"))?;
+        let cb = before(&l.nodes, t, "AXCheckBox").ok_or(format!("{section} switch not found"))?;
+        if (l.nodes[cb].value == "1") != on {
+            press(&l.nodes[cb].el);
+            sleep(Duration::from_millis(350));
+        }
+        Ok(())
+    }
+
+    fn titled_checkbox(r: &Resolve, title: &str, on: bool) -> Result<(), String> {
+        let l = layout(r)?;
+        let i = (l.start..l.nodes.len()).find(|&i| l.nodes[i].role == "AXCheckBox" && l.nodes[i].title == title)
+            .ok_or(format!("{title} not found"))?;
+        if (l.nodes[i].value == "1") != on {
+            press(&l.nodes[i].el);
+            sleep(Duration::from_millis(120));
+        }
+        Ok(())
+    }
+
+    /// Icon button row (Alignment, Anchor): the checkboxes right before the
+    /// label; `pick` is the index of the one to switch on. These need a real
+    /// click: an accessibility press flips the button but Resolve keeps the
+    /// old value.
+    fn icon_row(r: &Resolve, section: &str, label: &str, pick: usize) -> Result<(), String> {
+        for _ in 0..12 {
+            let l = layout(r)?;
+            let li = in_sec(&l, section, label).ok_or(format!("{label} not found"))?;
+            // Walk back over the row's reset button / spacers to its checkboxes.
+            let mut boxes = vec![];
+            let mut i = li;
+            while i > 0 {
+                i -= 1;
+                let n = &l.nodes[i];
+                if n.role == "AXCheckBox" {
+                    boxes.insert(0, i);
+                } else if !boxes.is_empty() || !(n.role == "AXButton" || (n.role == "AXStaticText" && n.label().is_empty())) {
+                    break;
+                }
+            }
+            let target = *boxes.get(pick).ok_or(format!("{label}: option {pick} missing"))?;
+            let n = &l.nodes[target];
+            if n.value == "1" {
+                return Ok(());
+            }
+            if visible(l.area, n) {
+                r.click(n.center())?;
+                sleep(Duration::from_millis(150));
+                return Ok(());
+            }
+            let mid = CGPoint::new(l.area.0 + l.area.2 / 2.0, l.area.1 + l.area.3 / 2.0);
+            r.scroll(mid, if n.y < l.area.1 { 6 } else { -6 });
+        }
+        Err(format!("Could not reach {label} in the Inspector"))
+    }
+
+    fn parse_hex(hex: &str) -> Option<(u8, u8, u8)> {
+        let h = hex.trim().trim_start_matches('#');
+        if h.len() != 6 { return None; }
+        Some((u8::from_str_radix(&h[0..2], 16).ok()?, u8::from_str_radix(&h[2..4], 16).ok()?, u8::from_str_radix(&h[4..6], 16).ok()?))
+    }
+
+    /// Colour well (the button right before a "Color" label): opens the macOS
+    /// colour panel, which has a hex field and an OK button.
+    fn color_in(r: &Resolve, section: &str, label: &str, hex: &str) -> Result<(), String> {
+        let (tr, tg, tb) = parse_hex(hex).ok_or(format!("bad colour {hex}"))?;
+        let l = layout(r)?;
+        let li = in_sec(&l, section, label).ok_or(format!("{section} > {label} not found"))?;
+        let bi = (li.saturating_sub(4)..li).rev().find(|&i| l.nodes[i].role == "AXButton" && l.nodes[i].desc.contains("rgb"))
+            .ok_or(format!("{section} > {label}: no colour button"))?;
+        let desc: String = {
+            let mut out = String::new();
+            let mut tag = false;
+            for c in l.nodes[bi].desc.chars() {
+                match c { '<' => tag = true, '>' => tag = false, _ if !tag => out.push(c), _ => {} }
+            }
+            out
+        };
+        let nums: Vec<u8> = desc.split(|c: char| !c.is_ascii_digit()).filter_map(|x| x.parse().ok()).collect();
+        if nums.len() >= 3 && (nums[0], nums[1], nums[2]) == (tr, tg, tb) {
+            return Ok(());
+        }
+        if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() {
+            eprintln!("color {section}>{label}: label#{li} @{},{} button#{bi} @{},{} desc={desc}", l.nodes[li].x, l.nodes[li].y, l.nodes[bi].x, l.nodes[bi].y);
+        }
+        press(&l.nodes[bi].el);
+        // Find the "Colors" panel (press once more if a just-enabled section
+        // swallowed the first press).
+        let t = Instant::now();
+        let mut repressed = false;
+        let panel = loop {
+            let wins = attr(r.app.as_CFTypeRef(), "AXWindows");
+            let found = wins.and_then(|w| {
+                let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_get_rule(w.as_CFTypeRef() as CFArrayRef) };
+                arr.iter().find(|w| attr_string(w.as_CFTypeRef(), "AXTitle") == "Colors").map(|w| w.clone())
+            });
+            if let Some(p) = found { break p; }
+            if !repressed && t.elapsed() > Duration::from_millis(800) {
+                repressed = true;
+                if let Ok(l2) = layout(r) {
+                    if let Some(li2) = in_sec(&l2, section, label) {
+                        if let Some(b2) = (li2.saturating_sub(4)..li2).rev().find(|&i| l2.nodes[i].role == "AXButton" && l2.nodes[i].desc.contains("rgb")) {
+                            press(&l2.nodes[b2].el);
+                        }
+                    }
+                }
+            }
+            if t.elapsed() > Duration::from_millis(2500) {
+                return Err(format!("{section} > {label}: colour panel did not open"));
+            }
+            sleep(Duration::from_millis(60));
+        };
+        sleep(Duration::from_millis(150));
+        let mut nodes = Vec::new();
+        collect(&panel, 0, &mut nodes);
+        let hex_field = nodes.iter().find(|n| n.role == "AXTextField" && n.title.is_empty() && n.value.len() == 6)
+            .ok_or("colour panel: hex field not found")?;
+        let ok = nodes.iter().find(|n| n.role == "AXButton" && n.title == "OK").ok_or("colour panel: OK not found")?;
+        let key = CFString::new("AXValue");
+        let val = CFString::new(&format!("{:02X}{:02X}{:02X}", tr, tg, tb));
+        unsafe {
+            AXUIElementSetAttributeValue(hex_field.el.as_CFTypeRef(), CFString::new("AXFocused").as_concrete_TypeRef(), CFBoolean::true_value().as_CFTypeRef());
+            AXUIElementSetAttributeValue(hex_field.el.as_CFTypeRef(), key.as_concrete_TypeRef(), val.as_CFTypeRef());
+            AXUIElementPerformAction(hex_field.el.as_CFTypeRef(), CFString::new("AXConfirm").as_concrete_TypeRef());
+        }
+        sleep(Duration::from_millis(120));
+        press(&ok.el);
+        sleep(Duration::from_millis(250));
+        Ok(())
+    }
+
+    fn set_values(r: &Resolve, s: &InspectorTrackStyle) -> Result<(), String> {
         // Video tab, Track sub-tab.
         let nodes = r.nodes()?;
         if let Some(i) = nodes.iter().position(|n| n.role == "AXCheckBox" && n.title == "Video") {
@@ -464,90 +683,78 @@ mod mac {
         if nodes[track].value == "0" { press(&nodes[track].el); sleep(Duration::from_millis(200)); }
 
         // Character
-        choose_combo(&r, 0, &style.font)?;
-        choose_combo(&r, 1, &style.font_face)?;
-        set_slider(&r, |l| {
-            let ch = find_label(&l.nodes, l.start, l.end, "Character")?;
-            let s = (l.start..ch).find(|&i| l.nodes[i].role == "AXStaticText" && l.nodes[i].label() == "Size")?;
-            before(&l.nodes, s, "AXSlider")
-        }, style.size)?;
-        if let Some(stroke) = style.stroke_size {
-            set_slider(&r, |l| {
-                let tr = find_label(&l.nodes, l.start, l.end, "Transform")?;
-                let st = find_label(&l.nodes, tr, l.end, "Stroke")?;
-                let s = (tr..st).find(|&i| l.nodes[i].role == "AXStaticText" && l.nodes[i].label() == "Size")?;
-                before(&l.nodes, s, "AXSlider")
-            }, stroke)?;
+        choose_combo(r, 0, &s.font)?;
+        choose_combo(r, 1, &s.font_face)?;
+        color_in(r, "Character", "Color", &s.color)?;
+        slider_in(r, "Character", "Size", s.size, 1.0)?;
+        slider_in(r, "Character", "Line Spacing", s.line_spacing, 1.0)?;
+        slider_in(r, "Character", "Kerning", s.kerning, 1.0)?;
+        choose_combo(r, 2, &s.font_case)?;
+        let align = ["left", "center", "right", "justify"].iter().position(|a| *a == s.alignment).unwrap_or(1);
+        icon_row(r, "Character", "Alignment", align)?;
+
+        // Stroke
+        color_in(r, "Stroke", "Color", &s.stroke_color)?;
+        slider_in(r, "Stroke", "Size", s.stroke_size, 1.0)?;
+        titled_checkbox(r, "Outside Only", s.stroke_outside_only)?;
+
+        // Transform
+        xy_in(r, "Transform", "Position", s.position_x, s.position_y)?;
+        xy_in(r, "Transform", "Zoom", s.zoom_x, s.zoom_y)?;
+        slider_in(r, "Transform", "Opacity", s.opacity, 100.0)?;
+        let v = ["top", "middle", "bottom"].iter().position(|a| *a == s.anchor_v).unwrap_or(1);
+        let h = ["left", "center", "right"].iter().position(|a| *a == s.anchor_h).unwrap_or(1);
+        icon_row(r, "Transform", "Anchor", v)?;
+        icon_row(r, "Transform", "Anchor", 3 + h)?;
+
+        // Drop Shadow
+        section_toggle(r, "Drop Shadow", s.shadow)?;
+        if s.shadow {
+            color_in(r, "Drop Shadow", "Color", &s.shadow_color)?;
+            xy_in(r, "Drop Shadow", "Offset", s.shadow_offset_x, s.shadow_offset_y)?;
+            slider_in(r, "Drop Shadow", "Blur", s.shadow_blur, 1.0)?;
+            slider_in(r, "Drop Shadow", "Opacity", s.shadow_opacity, 1.0)?;
         }
 
-        // Drop shadow
-        {
-            let l = layout(&r)?;
-            if let Some(d) = find_label(&l.nodes, l.start, l.end, "Drop Shadow") {
-                if let Some(cb) = before(&l.nodes, d, "AXCheckBox") {
-                    if (l.nodes[cb].value == "1") != style.shadow {
-                        press(&l.nodes[cb].el);
-                        sleep(Duration::from_millis(150));
-                    }
-                }
+        // Background
+        section_toggle(r, "Background", s.background)?;
+        if s.background {
+            color_in(r, "Background", "Color", &s.background_color)?;
+            color_in(r, "Background", "Outline Color", &s.background_outline_color)?;
+            slider_in(r, "Background", "Outline Width", s.background_outline_width, 1.0)?;
+            slider_in(r, "Background", "Corner Radius", s.background_corner_radius, 1000.0)?;
+            slider_in(r, "Background", "Opacity", s.background_opacity, 1.0)?;
+            titled_checkbox(r, "Override Sizing", s.background_override_sizing)?;
+        }
+
+        // Subtitle Settings
+        section_toggle(r, "Subtitle Settings", s.subtitle_settings)?;
+        if s.subtitle_settings {
+            titled_checkbox(r, "Use Project Settings", s.use_project_settings)?;
+            if !s.use_project_settings {
+                slider_in(r, "Subtitle Settings", "Max Line Length", s.max_line_length, 1.0)?;
+                slider_in(r, "Subtitle Settings", "Min Duration", s.min_duration, 1.0)?;
+                slider_in(r, "Subtitle Settings", "Max CPS", s.max_cps, 1.0)?;
             }
         }
-        if style.shadow {
-            let section = |l: &Layout| -> Option<(usize, usize)> {
-                let d = find_label(&l.nodes, l.start, l.end, "Drop Shadow")?;
-                let from = find_label(&l.nodes, l.start, d, "Style and Position").unwrap_or(l.start);
-                Some((from, d))
-            };
-            set_slider(&r, |l| {
-                let (a, b) = section(l)?;
-                before(&l.nodes, find_label(&l.nodes, a, b, "Blur")?, "AXSlider")
-            }, style.shadow_blur)?;
-            set_slider(&r, |l| {
-                let (a, b) = section(l)?;
-                before(&l.nodes, find_label(&l.nodes, a, b, "Opacity")?, "AXSlider")
-            }, style.shadow_opacity)?;
-            edit_number(&r, style.shadow_offset_x, |l| {
-                let (a, b) = section(l)?;
-                xy_field(&l.nodes, find_label(&l.nodes, a, b, "Offset")?, "X")
-            })?;
-            edit_number(&r, style.shadow_offset_y, |l| {
-                let (a, b) = section(l)?;
-                xy_field(&l.nodes, find_label(&l.nodes, a, b, "Offset")?, "Y")
-            })?;
-        }
-
-        // Position
-        let pos = |l: &Layout| -> Option<usize> {
-            let tr = find_label(&l.nodes, l.start, l.end, "Transform")?;
-            let ch = find_label(&l.nodes, l.start, tr, "Character")?;
-            find_label(&l.nodes, ch, tr, "Position")
-        };
-        if let Some(x) = style.position_x {
-            edit_number(&r, x, |l| xy_field(&l.nodes, pos(l)?, "X"))?;
-        }
-        if let Some(y) = style.position_y {
-            edit_number(&r, y, |l| xy_field(&l.nodes, pos(l)?, "Y"))?;
-        }
-
         Ok(())
     }
 
-    fn set_slider<F>(r: &Resolve, locate: F, value: f64) -> Result<(), String>
+    /// Set a slider through accessibility. Qt sliders hold integer steps:
+    /// `scale` converts the shown value to steps (Opacity 100.00 = 10000).
+    fn set_slider<F>(r: &Resolve, locate: F, value: f64, scale: f64) -> Result<(), String>
     where
         F: Fn(&Layout) -> Option<usize>,
     {
         let l = layout(r)?;
-        let i = locate(&l).ok_or("Inspector slider not found")?;
+        let i = locate(&l).ok_or("slider not found")?;
+        let target = (value * scale).round();
         let current: f64 = l.nodes[i].value.parse().unwrap_or(f64::NAN);
-        if (current - value).abs() < 0.0005 {
+        if (current - target).abs() < 0.5 {
             return Ok(());
         }
-        // Qt sliders report integer steps; the label next to the slider shows
-        // the real value. Scale by the ratio when they differ (e.g. 0..1 x 100).
-        let shown: f64 = l.nodes.get(i + 1).and_then(|n| n.label().parse().ok()).unwrap_or(current);
-        let scale = if shown != 0.0 && current.is_finite() && (current / shown - 1.0).abs() > 0.01 { current / shown } else { 1.0 };
-        if !set_number(&l.nodes[i].el, (value * scale).round()) {
-            return Err("Resolve refused a slider value".into());
+        if !set_number(&l.nodes[i].el, target) {
+            return Err("Resolve refused the value".into());
         }
         sleep(Duration::from_millis(60));
         Ok(())

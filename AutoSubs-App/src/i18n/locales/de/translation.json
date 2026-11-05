@@ -816,6 +816,9 @@
     "openInResolve": "In Resolve öffnen",
     "previewValues": "AutoSubs setzt diese Werte beim Senden in Resolve (Inspector → Track). Beim ersten Mal fragt macOS nach Bedienungshilfen.",
     "oneLookHint": "Die Untertitelspur hat in Resolve einen Look pro Timeline (Spur 1, im Inspector unter „Track“). Für einen eigenen Look pro Stil nimm „Ausgabe als: Video-Spur“ mit den Fusion-Stilen, z. B. „Tipico Untertitel“.",
-    "applyFailed": "Spurstil nicht gesetzt"
+    "applyFailed": "Spurstil nicht gesetzt",
+    "inspectorHint": "Gleiche Reihenfolge und Namen wie in Resolve (Inspector → Track). AutoSubs setzt alles beim Senden.",
+    "searchFont": "Schrift suchen…",
+    "noFont": "Keine Schrift gefunden"
   }
 }

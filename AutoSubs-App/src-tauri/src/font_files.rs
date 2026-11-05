@@ -98,3 +98,49 @@ mod tests {
         assert_eq!(squash("Arial Rounded MT Bold"), "arialroundedmtbold");
     }
 }
+
+#[derive(serde::Serialize)]
+pub struct FontFamily {
+    pub family: String,
+    pub faces: Vec<String>,
+}
+
+/// Installed font families with their faces (the same names Resolve's
+/// Inspector lists). Sync command: Tauri runs it on the main thread, which
+/// NSFontManager requires.
+#[command]
+pub fn list_system_fonts() -> Result<Vec<FontFamily>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2::MainThreadMarker;
+        use objc2_app_kit::NSFontManager;
+        use objc2_foundation::NSString;
+        let mtm = MainThreadMarker::new().ok_or("font list must run on the main thread")?;
+        let fm = NSFontManager::sharedFontManager(mtm);
+        let mut out = Vec::new();
+        for fam in fm.availableFontFamilies().iter() {
+            let name = fam.to_string();
+            if name.starts_with('.') {
+                continue; // hidden system UI fonts
+            }
+            let mut faces = Vec::new();
+            if let Some(members) = fm.availableMembersOfFontFamily(&fam) {
+                for m in members.iter() {
+                    if let Some(style) = m.iter().nth(1).and_then(|o| o.downcast::<NSString>().ok()) {
+                        let s = style.to_string();
+                        if !faces.contains(&s) {
+                            faces.push(s);
+                        }
+                    }
+                }
+            }
+            out.push(FontFamily { family: name, faces });
+        }
+        out.sort_by(|a, b| a.family.to_lowercase().cmp(&b.family.to_lowercase()));
+        Ok(out)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(Vec::new())
+    }
+}
