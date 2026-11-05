@@ -222,15 +222,42 @@ mod mac {
             Ok(Self { pid, app })
         }
 
+        /// Resolve's main window: the largest one. Its title is the project
+        /// name in full-screen/tabbed setups, and a thin title-bar window may
+        /// be listed first.
         fn window(&self) -> Result<CFType, String> {
-            let wins = attr(self.app.as_CFTypeRef(), "AXWindows").ok_or("Resolve has no window")?;
-            let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_get_rule(wins.as_CFTypeRef() as CFArrayRef) };
-            for w in arr.iter() {
-                if attr_string(w.as_CFTypeRef(), "AXTitle").starts_with("DaVinci Resolve") {
-                    return Ok(w.clone());
+            let t = Instant::now();
+            loop {
+                if let Some(wins) = attr(self.app.as_CFTypeRef(), "AXWindows") {
+                    let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_get_rule(wins.as_CFTypeRef() as CFArrayRef) };
+                    let best = arr.iter()
+                        .filter(|w| attr_string(w.as_CFTypeRef(), "AXTitle") != "Colors")
+                        .map(|w| {
+                            let (ww, hh) = attr_point(w.as_CFTypeRef(), "AXSize", AX_SIZE);
+                            (ww * hh, w.clone())
+                        })
+                        .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+                    if let Some((area, w)) = best {
+                        if area > 200_000.0 {
+                            return Ok(w);
+                        }
+                    }
                 }
+                if std::env::var_os("AUTOSUBS_AX_DEBUG").is_some() {
+                    let key = CFString::new("AXWindows");
+                    let mut out: CFTypeRef = std::ptr::null();
+                    let err = unsafe { AXUIElementCopyAttributeValue(self.app.as_CFTypeRef(), key.as_concrete_TypeRef(), &mut out) };
+                    eprintln!("AXWindows err={err} pid={} front={}", self.pid, attr_string(self.app.as_CFTypeRef(), "AXFrontmost"));
+                    if !out.is_null() {
+                        let arr: CFArray<CFType> = unsafe { CFArray::wrap_under_create_rule(out as CFArrayRef) };
+                        for w in arr.iter() { eprintln!("  win '{}' {:?}", attr_string(w.as_CFTypeRef(), "AXTitle"), attr_point(w.as_CFTypeRef(), "AXSize", AX_SIZE)); }
+                    }
+                }
+                if t.elapsed() > Duration::from_secs(3) {
+                    return Err("Resolve's window is not reachable. Bring DaVinci Resolve to the front and send again.".into());
+                }
+                sleep(Duration::from_millis(100));
             }
-            arr.iter().next().map(|w| w.clone()).ok_or_else(|| "Resolve has no window".into())
         }
 
         fn nodes(&self) -> Result<Vec<Node>, String> {
@@ -241,14 +268,22 @@ mod mac {
         }
 
         fn bring_front(&self) -> Result<(), String> {
-            let key = CFString::new("AXFrontmost");
-            unsafe {
-                AXUIElementSetAttributeValue(self.app.as_CFTypeRef(), key.as_concrete_TypeRef(), CFBoolean::true_value().as_CFTypeRef());
+            // `open -a` also switches to Resolve's Space (full screen or
+            // another desktop); setting AXFrontmost alone does not.
+            let opened = std::process::Command::new("open").args(["-a", "DaVinci Resolve"]).status()
+                .map(|s| s.success()).unwrap_or(false);
+            if !opened {
+                let key = CFString::new("AXFrontmost");
+                unsafe {
+                    AXUIElementSetAttributeValue(self.app.as_CFTypeRef(), key.as_concrete_TypeRef(), CFBoolean::true_value().as_CFTypeRef());
+                }
             }
             let t = Instant::now();
-            while t.elapsed() < Duration::from_secs(2) {
+            while t.elapsed() < Duration::from_secs(4) {
                 if attr_string(self.app.as_CFTypeRef(), "AXFrontmost") == "1" {
-                    sleep(Duration::from_millis(80));
+                    // Let a Space switch finish before reading the window.
+                    let _ = self.window()?;
+                    sleep(Duration::from_millis(150));
                     return Ok(());
                 }
                 sleep(Duration::from_millis(40));
