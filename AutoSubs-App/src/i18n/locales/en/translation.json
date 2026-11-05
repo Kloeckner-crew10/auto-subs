@@ -806,5 +806,26 @@
     "plain": "Text only",
     "karaoke": "Word highlight",
     "highlightColor": "Highlight colour"
+  },
+  "trackStyles": {
+    "add": "New style",
+    "edit": "Edit style",
+    "newName": "New style",
+    "copySuffix": "(copy)",
+    "duplicate": "Duplicate",
+    "dialogDescription": "Subtitle track look and how AutoSubs writes the subtitles.",
+    "name": "Name",
+    "mode": "Display",
+    "font": "Font",
+    "fontFace": "Font face",
+    "size": "Size",
+    "color": "Text colour",
+    "shadowOn": "Drop shadow",
+    "shadowColor": "Shadow colour",
+    "shadowOpacity": "Opacity (%)",
+    "offsetX": "Offset X",
+    "offsetY": "Offset Y",
+    "blur": "Blur",
+    "resolveHint": "Set font, size, colour and shadow once in Resolve's Inspector for the subtitle track (Track). AutoSubs applies highlight and keyword colours itself."
   }
 }

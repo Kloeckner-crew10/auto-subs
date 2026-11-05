@@ -786,5 +786,26 @@
     "plain": "텍스트만",
     "karaoke": "단어 강조",
     "highlightColor": "강조 색상"
+  },
+  "trackStyles": {
+    "add": "새 스타일",
+    "edit": "스타일 편집",
+    "newName": "새 스타일",
+    "copySuffix": "(복사본)",
+    "duplicate": "복제",
+    "dialogDescription": "자막 트랙 모양과 자막 작성 방식.",
+    "name": "이름",
+    "mode": "표시",
+    "font": "글꼴",
+    "fontFace": "굵기",
+    "size": "크기",
+    "color": "글자 색",
+    "shadowOn": "그림자",
+    "shadowColor": "그림자 색",
+    "shadowOpacity": "불투명도 (%)",
+    "offsetX": "오프셋 X",
+    "offsetY": "오프셋 Y",
+    "blur": "흐림",
+    "resolveHint": "글꼴, 크기, 색, 그림자는 Resolve 인스펙터(Track)에서 한 번 설정합니다."
   }
 }

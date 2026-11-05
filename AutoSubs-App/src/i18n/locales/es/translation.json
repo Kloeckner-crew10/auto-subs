@@ -786,5 +786,26 @@
     "plain": "Solo texto",
     "karaoke": "Resaltar palabra",
     "highlightColor": "Color de resaltado"
+  },
+  "trackStyles": {
+    "add": "Nuevo estilo",
+    "edit": "Editar estilo",
+    "newName": "Nuevo estilo",
+    "copySuffix": "(copia)",
+    "duplicate": "Duplicar",
+    "dialogDescription": "Aspecto de la pista de subtítulos y cómo se escriben.",
+    "name": "Nombre",
+    "mode": "Modo",
+    "font": "Fuente",
+    "fontFace": "Estilo",
+    "size": "Tamaño",
+    "color": "Color del texto",
+    "shadowOn": "Sombra",
+    "shadowColor": "Color de sombra",
+    "shadowOpacity": "Opacidad (%)",
+    "offsetX": "Desplaz. X",
+    "offsetY": "Desplaz. Y",
+    "blur": "Desenfoque",
+    "resolveHint": "Fuente, tamaño, color y sombra se ajustan una vez en el Inspector de Resolve (Track)."
   }
 }

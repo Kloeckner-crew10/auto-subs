@@ -1,4 +1,4 @@
-import type { CustomerProfile, Settings, SubtitleRules, WordReplacement } from "@/types";
+import type { CustomerProfile, Settings, SubtitleRules, SubtitleTrackStyle, WordReplacement } from "@/types";
 
 /** Profile picked for the next run, or undefined when none is active. */
 export function getActiveProfile(
@@ -108,4 +108,13 @@ export function formatReplacements(rules: WordReplacement[]): string {
 export function parseSeconds(text: string): number | null {
   const value = Number(text.replace(",", ".").trim());
   return text.trim() && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/** Cue mode and highlight colour of the selected subtitle-track style. */
+export function activeSubtitleStyle(
+  settings: Pick<Settings, "subtitleStyles" | "activeSubtitleStyleId" | "subtitleTrackStyle">,
+): SubtitleTrackStyle {
+  const styles = settings.subtitleStyles ?? [];
+  const style = styles.find((s) => s.id === settings.activeSubtitleStyleId) ?? styles[0];
+  return style ? { mode: style.mode, highlightColor: style.highlightColor } : settings.subtitleTrackStyle;
 }

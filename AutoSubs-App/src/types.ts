@@ -189,6 +189,11 @@ export interface Settings {
     outputTarget: OutputTarget;
     /** Style for Resolve's subtitle track (no Fusion): plain or word highlight. */
     subtitleTrackStyle: SubtitleTrackStyle;
+    /** User-defined styles for Resolve's subtitle track. */
+    subtitleStyles: SubtitleStyleDef[];
+    activeSubtitleStyleId: string | null;
+    /** Built-in subtitle styles already offered once. */
+    seededSubtitleStyles: string[];
     /** Safe-zone overlay controls (same as the VisibleZone plugin). */
     safeZone: SafeZoneSettings;
 
@@ -204,6 +209,15 @@ export interface Settings {
 }
 
 export type OutputTarget = "video" | "subtitle" | "both";
+
+/** A named style for Resolve's subtitle track: look plus how cues are written. */
+export interface SubtitleStyleDef {
+    id: string;
+    name: string;
+    mode: SubtitleTrackStyle["mode"];
+    highlightColor: string;
+    look: TrackStyle;
+}
 
 export interface SubtitleTrackStyle {
     /** "plain": one cue per subtitle; "karaoke": one cue per word, active word highlighted. */

@@ -786,5 +786,26 @@
     "plain": "Texte seul",
     "karaoke": "Mot surligné",
     "highlightColor": "Couleur de surlignage"
+  },
+  "trackStyles": {
+    "add": "Nouveau style",
+    "edit": "Modifier le style",
+    "newName": "Nouveau style",
+    "copySuffix": "(copie)",
+    "duplicate": "Dupliquer",
+    "dialogDescription": "Aspect de la piste de sous-titres et écriture des sous-titres.",
+    "name": "Nom",
+    "mode": "Affichage",
+    "font": "Police",
+    "fontFace": "Graisse",
+    "size": "Taille",
+    "color": "Couleur du texte",
+    "shadowOn": "Ombre portée",
+    "shadowColor": "Couleur d’ombre",
+    "shadowOpacity": "Opacité (%)",
+    "offsetX": "Décalage X",
+    "offsetY": "Décalage Y",
+    "blur": "Flou",
+    "resolveHint": "Police, taille, couleur et ombre se règlent une fois dans l’Inspecteur de Resolve (Track)."
   }
 }

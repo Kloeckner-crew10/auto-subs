@@ -1,5 +1,5 @@
 import { DEFAULT_SAFE_ZONE_SETTINGS } from "@/lib/safe-zones";
-import { BUILT_IN_PROFILES, TIPICO_TRACK_STYLE } from "@/presets/built-in-profiles";
+import { BUILT_IN_PROFILES, BUILT_IN_SUBTITLE_STYLES, TIPICO_TRACK_STYLE } from "@/presets/built-in-profiles";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { platform } from "@tauri-apps/plugin-os";
@@ -84,6 +84,9 @@ export const DEFAULT_SETTINGS: Settings = {
   // Output
   outputTarget: "video",
   subtitleTrackStyle: { mode: "plain", highlightColor: "#FFE64A" },
+  subtitleStyles: [],
+  activeSubtitleStyleId: null,
+  seededSubtitleStyles: [],
   safeZone: DEFAULT_SAFE_ZONE_SETTINGS,
 
   // Double proof
@@ -128,7 +131,27 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
     if (!profiles.some((p) => p.id === profile.id)) profiles.push(structuredClone(profile));
     seeded.add(profile.id);
   }
-  return { ...next, customerProfiles: profiles, seededProfiles: [...seeded] };
+  // Subtitle-track styles: same offer-once rule.
+  const seededStyles = new Set(next.seededSubtitleStyles ?? []);
+  const styles = [...(next.subtitleStyles ?? [])];
+  for (const style of BUILT_IN_SUBTITLE_STYLES) {
+    if (seededStyles.has(style.id)) continue;
+    if (!styles.some((s) => s.id === style.id)) styles.push(structuredClone(style));
+    seededStyles.add(style.id);
+  }
+  const activeSubtitleStyleId =
+    next.activeSubtitleStyleId && styles.some((s) => s.id === next.activeSubtitleStyleId)
+      ? next.activeSubtitleStyleId
+      : styles[0]?.id ?? null;
+
+  return {
+    ...next,
+    customerProfiles: profiles,
+    seededProfiles: [...seeded],
+    subtitleStyles: styles,
+    seededSubtitleStyles: [...seededStyles],
+    activeSubtitleStyleId,
+  };
 }
 
 function normalizeCaptionStyle(persisted: unknown): Partial<Settings> {

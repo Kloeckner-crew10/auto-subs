@@ -786,5 +786,26 @@
     "plain": "テキストのみ",
     "karaoke": "単語ハイライト",
     "highlightColor": "ハイライト色"
+  },
+  "trackStyles": {
+    "add": "新しいスタイル",
+    "edit": "スタイルを編集",
+    "newName": "新しいスタイル",
+    "copySuffix": "（コピー）",
+    "duplicate": "複製",
+    "dialogDescription": "字幕トラックの見た目と字幕の書き出し方法。",
+    "name": "名前",
+    "mode": "表示",
+    "font": "フォント",
+    "fontFace": "ウェイト",
+    "size": "サイズ",
+    "color": "文字色",
+    "shadowOn": "ドロップシャドウ",
+    "shadowColor": "影の色",
+    "shadowOpacity": "不透明度 (%)",
+    "offsetX": "オフセットX",
+    "offsetY": "オフセットY",
+    "blur": "ぼかし",
+    "resolveHint": "フォント・サイズ・色・影はResolveのインスペクタ（Track）で一度設定します。"
   }
 }

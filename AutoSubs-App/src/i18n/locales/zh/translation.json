@@ -786,5 +786,26 @@
     "plain": "仅文本",
     "karaoke": "逐词高亮",
     "highlightColor": "高亮颜色"
+  },
+  "trackStyles": {
+    "add": "新建样式",
+    "edit": "编辑样式",
+    "newName": "新建样式",
+    "copySuffix": "（副本）",
+    "duplicate": "复制",
+    "dialogDescription": "字幕轨道外观及字幕写入方式。",
+    "name": "名称",
+    "mode": "显示",
+    "font": "字体",
+    "fontFace": "字重",
+    "size": "大小",
+    "color": "文字颜色",
+    "shadowOn": "投影",
+    "shadowColor": "阴影颜色",
+    "shadowOpacity": "不透明度 (%)",
+    "offsetX": "偏移 X",
+    "offsetY": "偏移 Y",
+    "blur": "模糊",
+    "resolveHint": "字体、大小、颜色和阴影需在 Resolve 检查器（Track）中设置一次。"
   }
 }

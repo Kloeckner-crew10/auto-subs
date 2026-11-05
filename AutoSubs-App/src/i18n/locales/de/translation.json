@@ -786,5 +786,26 @@
     "plain": "Nur Text",
     "karaoke": "Wort-Highlight",
     "highlightColor": "Highlight-Farbe"
+  },
+  "trackStyles": {
+    "add": "Neuer Stil",
+    "edit": "Stil bearbeiten",
+    "newName": "Neuer Stil",
+    "copySuffix": "(Kopie)",
+    "duplicate": "Duplizieren",
+    "dialogDescription": "Look der Untertitelspur und wie AutoSubs die Untertitel schreibt.",
+    "name": "Name",
+    "mode": "Darstellung",
+    "font": "Schrift",
+    "fontFace": "Schnitt",
+    "size": "Größe",
+    "color": "Textfarbe",
+    "shadowOn": "Schlagschatten",
+    "shadowColor": "Schattenfarbe",
+    "shadowOpacity": "Deckkraft (%)",
+    "offsetX": "Versatz X",
+    "offsetY": "Versatz Y",
+    "blur": "Weichheit",
+    "resolveHint": "Schrift, Größe, Farbe und Schatten stellst du einmal in Resolve im Inspector der Untertitelspur ein (Track). AutoSubs setzt Highlight und Begriffsfarben automatisch."
   }
 }

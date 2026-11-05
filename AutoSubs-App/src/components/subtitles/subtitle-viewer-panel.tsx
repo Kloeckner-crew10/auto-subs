@@ -30,7 +30,7 @@ import { useResolve } from "@/contexts/ResolveContext";
 import { useAdobe } from "@/contexts/AdobeContext";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { useSettingsStore } from "@/stores/settings-store";
-import { getActiveProfile, profileKeywords } from "@/lib/customer-profiles";
+import { activeSubtitleStyle, getActiveProfile, profileKeywords } from "@/lib/customer-profiles";
 import { useOutputPanelStore } from "@/stores/output-panel-store";
 import { useAudioPreview } from "@/contexts/AudioPreviewContext";
 import { useErrorDialog } from "@/contexts/ErrorDialogContext";
@@ -535,7 +535,7 @@ export function SubtitleViewerPanel({
           subtitles,
           profileKeywords(profile),
           profile?.keywordColor,
-          useSettingsStore.getState().subtitleTrackStyle,
+          activeSubtitleStyle(useSettingsStore.getState()),
         );
         await addSubtitleTrackToTimeline(srtPath);
       }

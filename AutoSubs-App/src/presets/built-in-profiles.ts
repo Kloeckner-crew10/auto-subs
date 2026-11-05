@@ -1,4 +1,4 @@
-import type { CustomerProfile, TrackStyle } from "@/types";
+import type { CustomerProfile, SubtitleStyleDef, TrackStyle } from "@/types";
 
 /**
  * Customer profiles offered once on first start. They are ordinary profiles
@@ -86,5 +86,18 @@ export const BUILT_IN_PROFILES: CustomerProfile[] = [
     minDurationSec: null,
     maxDurationSec: null,
     pauseSplitSec: null,
+  },
+];
+
+/** Subtitle-track styles offered once on first start. */
+export const BUILT_IN_SUBTITLE_STYLES: SubtitleStyleDef[] = [
+  { id: "builtin:tipico-track", name: "Tipico", mode: "plain", highlightColor: "#FFE64A", look: TIPICO_TRACK_STYLE },
+  { id: "builtin:tipico-karaoke", name: "Tipico Wort-Highlight", mode: "karaoke", highlightColor: "#FFE64A", look: TIPICO_TRACK_STYLE },
+  {
+    id: "builtin:standard-white",
+    name: "Standard (weiß)",
+    mode: "plain",
+    highlightColor: "#FFE64A",
+    look: { ...TIPICO_TRACK_STYLE, font: "Helvetica Neue", fontFace: "Bold" },
   },
 ];
