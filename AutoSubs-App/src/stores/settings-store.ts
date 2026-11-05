@@ -133,7 +133,16 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
   }
   // Subtitle-track styles: same offer-once rule.
   const seededStyles = new Set(next.seededSubtitleStyles ?? []);
-  const styles = [...(next.subtitleStyles ?? [])];
+  let styles = [...(next.subtitleStyles ?? [])];
+  // One-time cleanup (Nov 2026): only the Tipico subtitle style stays, with
+  // the values set in Resolve's Track Style. Styles added later are kept.
+  const TIPICO_ONLY = "reset:tipico-only-2026-11";
+  if (!seededStyles.has(TIPICO_ONLY)) {
+    styles = [];
+    seededStyles.clear();
+    seededStyles.add(TIPICO_ONLY);
+    next = { ...next, activeSubtitleStyleId: "builtin:tipico-track" };
+  }
   for (const style of BUILT_IN_SUBTITLE_STYLES) {
     if (seededStyles.has(style.id)) continue;
     if (!styles.some((s) => s.id === style.id)) styles.push(structuredClone(style));
