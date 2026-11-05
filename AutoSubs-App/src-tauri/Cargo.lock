@@ -299,6 +299,8 @@ version = "3.11.3"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "core-foundation 0.10.1",
+ "core-graphics",
  "dirs 5.0.1",
  "eyre",
  "futures-util",

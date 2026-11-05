@@ -814,7 +814,8 @@
     "resolveExisting": "This style belongs to track “{{track}}”. Change it any time in that track's Inspector.",
     "createInResolve": "Set up in Resolve",
     "openInResolve": "Open in Resolve",
-    "previewValues": "AutoSubs preview only: set these yourself in Resolve (Inspector → Track); AutoSubs cannot apply them there",
-    "oneLookHint": "Resolve gives the subtitle track one look per timeline (track 1, Inspector → Track). For a separate look per style use “Output as: Video track” with the Fusion styles, e.g. “Tipico Untertitel”."
+    "previewValues": "发送时 AutoSubs 会在 Resolve 中设置这些值（检查器 → Track）。首次使用时 macOS 会请求辅助功能权限。",
+    "oneLookHint": "Resolve gives the subtitle track one look per timeline (track 1, Inspector → Track). For a separate look per style use “Output as: Video track” with the Fusion styles, e.g. “Tipico Untertitel”.",
+    "applyFailed": "未设置轨道样式"
   }
 }

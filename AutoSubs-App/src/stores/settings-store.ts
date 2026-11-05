@@ -143,6 +143,12 @@ function seedBuiltInProfiles(next: Partial<Settings>): Partial<Settings> {
     seededStyles.add(TIPICO_ONLY);
     next = { ...next, activeSubtitleStyleId: "builtin:tipico-track" };
   }
+  // Position and stroke were added to the Tipico look later.
+  styles = styles.map((st) =>
+    st.id === "builtin:tipico-track" && st.look && st.look.positionY == null
+      ? { ...st, look: { ...st.look, positionX: 1080, positionY: 1100, strokeSize: 0 } }
+      : st,
+  );
   for (const style of BUILT_IN_SUBTITLE_STYLES) {
     if (seededStyles.has(style.id)) continue;
     if (!styles.some((s) => s.id === style.id)) styles.push(structuredClone(style));

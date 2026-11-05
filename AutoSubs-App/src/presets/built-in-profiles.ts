@@ -66,6 +66,9 @@ export const TIPICO_TRACK_STYLE: TrackStyle = {
   shadowOffsetY: -25,
   shadowBlur: 7,
   shadowOpacity: 75,
+  positionX: 1080,
+  positionY: 1100,
+  strokeSize: 0,
 };
 
 export const BUILT_IN_PROFILES: CustomerProfile[] = [

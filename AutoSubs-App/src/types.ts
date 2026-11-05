@@ -265,6 +265,10 @@ export interface TrackStyle {
     shadowBlur: number;
     /** 0..100 like Resolve's opacity field. */
     shadowOpacity: number;
+    /** Track Style > Transform > Position (timeline pixels). */
+    positionX?: number;
+    positionY?: number;
+    strokeSize?: number;
 }
 
 export interface CustomerProfile {

@@ -32,6 +32,7 @@ mod resolve_bridge;
 mod keywords;
 mod font_files;
 mod resolve_scripts;
+mod resolve_inspector;
 mod resolve_launcher;
 mod adobe_bridge;
 mod cli;
@@ -399,6 +400,7 @@ fn main() {
     // The "Open from Resolve" watcher runs before Tauri is built: no window,
     // no webview, no dock icon (see resolve_launcher.rs).
     resolve_launcher::handle_args();
+    resolve_inspector::handle_args();
 
     // Inject system proxy env vars before any thread or HTTP client is created so
     // that both ureq (hf-hub) and reqwest pick up the Windows system proxy set by
@@ -694,6 +696,7 @@ fn main() {
             transcription_api::cancel_transcription,
             transcription_api::reformat_subtitles,
             font_files::read_font_file,
+            resolve_inspector::apply_resolve_track_style,
             transcription_api::density_char_limits,
             models::get_downloaded_models,
             models::delete_model,

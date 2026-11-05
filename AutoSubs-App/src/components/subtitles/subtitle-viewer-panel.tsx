@@ -35,7 +35,7 @@ import { useOutputPanelStore } from "@/stores/output-panel-store";
 import { useAudioPreview } from "@/contexts/AudioPreviewContext";
 import { useErrorDialog } from "@/contexts/ErrorDialogContext";
 import { describeError } from "@/components/transcription/utils";
-import { ResolveApiError, addSubtitleTrackToTimeline } from "@/api/resolve-api";
+import { ResolveApiError, addSubtitleTrackToTimeline, applySubtitleTrackLook } from "@/api/resolve-api";
 import { useTranslation } from "react-i18next";
 import { type SubtitleDocumentListItem, writeResolveSrt } from "@/utils/file-utils";
 
@@ -545,6 +545,19 @@ export function SubtitleViewerPanel({
           fromSec: subtitles.length ? Math.min(...subtitles.map((s) => s.start)) : undefined,
           toSec: subtitles.length ? Math.max(...subtitles.map((s) => s.end)) : undefined,
         });
+        // Resolve's API cannot style the subtitle track, so AutoSubs sets the
+        // look through Resolve's Inspector. A failure here keeps the captions.
+        if (styleDef?.look && platform() === "macos") {
+          try {
+            await applySubtitleTrackLook(styleDef.look);
+          } catch (styleError) {
+            console.error("Failed to set subtitle track style:", styleError);
+            showError({
+              title: t("trackStyles.applyFailed", "Track style not set"),
+              message: String(styleError),
+            });
+          }
+        }
       }
       setJustSent(true);
     } catch (error) {

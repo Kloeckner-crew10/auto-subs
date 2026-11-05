@@ -2098,6 +2098,40 @@ function AddSubtitleTrack(req)
              landedFrame = landed, attempts = attempts }
 end
 
+--- Lock every video and audio track that is not locked yet, so that
+--- Edit > Select All in Resolve picks only subtitle clips. Returns the tracks
+--- it locked; UnlockTracks gives them back.
+function LockNonSubtitleTracks()
+    refresh_project()
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then return make_error("Failed to lock tracks", "No active timeline in Resolve") end
+    resolve:OpenPage("edit")
+    local locked = {}
+    for _, kind in ipairs({ "video", "audio" }) do
+        for i = 1, (timeline:GetTrackCount(kind) or 0) do
+            if not timeline:GetIsTrackLocked(kind, i) then
+                timeline:SetTrackLock(kind, i, true)
+                table.insert(locked, { kind = kind, index = i })
+            end
+        end
+    end
+    -- Subtitle track 1 must be selectable.
+    if (timeline:GetTrackCount("subtitle") or 0) >= 1 and timeline:GetIsTrackLocked("subtitle", 1) then
+        timeline:SetTrackLock("subtitle", 1, false)
+    end
+    return { locked = locked }
+end
+
+function UnlockTracks(req)
+    refresh_project()
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then return { ok = false } end
+    for _, t in ipairs(req.locked or {}) do
+        pcall(function() timeline:SetTrackLock(t.kind, tonumber(t.index), false) end)
+    end
+    return { ok = true }
+end
+
 --- New subtitle style: a named subtitle track with one sample caption, and
 --- the playhead on it, so the editor can style the track in the Inspector.
 function CreateSubtitleStyleTrack(req)
@@ -3124,6 +3158,8 @@ local handlers = {
 
     AddSubtitleTrack = function(req) return AddSubtitleTrack(req) end,
     CreateSubtitleStyleTrack = function(req) return CreateSubtitleStyleTrack(req) end,
+    LockNonSubtitleTracks = function() return LockNonSubtitleTracks() end,
+    UnlockTracks = function(req) return UnlockTracks(req) end,
     GetTimelineResolution = function() return GetTimelineResolution() end,
     AddSafeZoneOverlay = function(req) return AddSafeZoneOverlay(req) end,
     RemoveSafeZoneOverlay = function() return RemoveSafeZoneOverlay() end,
