@@ -254,9 +254,22 @@ export async function addSubtitlesToTimeline(
  * Put the subtitles on Resolve's own subtitle track as plain text (no Fusion).
  * `srtPath` is an SRT file the app has already written to disk.
  */
-export async function addSubtitleTrackToTimeline(srtPath: string): Promise<{ count?: number }> {
-  const data = await callResolve({ func: 'AddSubtitleTrack', srtPath });
+export async function addSubtitleTrackToTimeline(
+  srtPath: string,
+  options: { trackName?: string; fromSec?: number; toSec?: number } = {},
+): Promise<{ count?: number; trackIndex?: number }> {
+  const data = await callResolve({ func: 'AddSubtitleTrack', srtPath, ...options });
   throwIfError(data, 'AddSubtitleTrack');
+  return data;
+}
+
+/**
+ * New subtitle style: a named subtitle track with one sample caption, playhead
+ * on it, so the editor can style the track in Resolve's Inspector.
+ */
+export async function createSubtitleStyleTrack(trackName: string, srtPath: string): Promise<{ trackIndex?: number }> {
+  const data = await callResolve({ func: 'CreateSubtitleStyleTrack', trackName, srtPath });
+  throwIfError(data, 'CreateSubtitleStyleTrack');
   return data;
 }
 

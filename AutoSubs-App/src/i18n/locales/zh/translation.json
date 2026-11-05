@@ -806,6 +806,14 @@
     "offsetX": "偏移 X",
     "offsetY": "偏移 Y",
     "blur": "模糊",
-    "resolveHint": "字体、大小、颜色和阴影需在 Resolve 检查器（Track）中设置一次。"
+    "resolveHint": "字体、大小、颜色和阴影需在 Resolve 检查器（Track）中设置一次。",
+    "namePlaceholder": "e.g. Tipico Large",
+    "resolveTitle": "Set up the style in Resolve",
+    "resolveIntro": "AutoSubs adds its own subtitle track with a sample caption. Style it in the Inspector under “Track”, then come back and save.",
+    "resolveDone": "The sample caption is on track “{{track}}” with the playhead on it. Set font, size, colour, position and shadow in the Inspector under “Track”, then save.",
+    "resolveExisting": "This style belongs to track “{{track}}”. Change it any time in that track's Inspector.",
+    "createInResolve": "Set up in Resolve",
+    "openInResolve": "Open in Resolve",
+    "previewValues": "Values for the AutoSubs preview (optional)"
   }
 }

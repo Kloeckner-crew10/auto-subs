@@ -217,6 +217,11 @@ export interface SubtitleStyleDef {
     mode: SubtitleTrackStyle["mode"];
     highlightColor: string;
     look: TrackStyle;
+    /**
+     * Resolve subtitle track that carries this style ("AutoSubs - <name>").
+     * Absent for styles that use the timeline's first subtitle track.
+     */
+    trackName?: string;
 }
 
 export interface SubtitleTrackStyle {

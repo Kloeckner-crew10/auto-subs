@@ -1907,48 +1907,165 @@ function AddSafeZoneOverlay(req)
     return { trackIndex = idx, covered = pos >= endFrame }
 end
 
---- Put plain-text subtitles on Resolve's own subtitle track (no Fusion).
---- The app writes an SRT file (Lua cannot write files); Resolve imports it as
---- a media pool item, and AppendToTimeline places it on a subtitle track.
---- SRT times are relative to the timeline start, like transcript times.
+-- ── Resolve subtitle track ───────────────────────────────────────────────
+-- AutoSubs subtitle styles live on named subtitle tracks ("AutoSubs - <name>"):
+-- the editor styles the track once in the Inspector (Track tab) and Resolve
+-- keeps that look on the track. Scripts cannot read or set track styles, so
+-- the track itself is the style. Plain text arrives as an SRT the app wrote.
+
+local function find_subtitle_track(timeline, name)
+    if type(name) ~= "string" or name == "" then return nil end
+    for i = 1, (timeline:GetTrackCount("subtitle") or 0) do
+        if timeline:GetTrackName("subtitle", i) == name then
+            return i
+        end
+    end
+    return nil
+end
+
+local function import_srt(srtPath)
+    if type(srtPath) ~= "string" or srtPath == "" or not bmd.fileexists(srtPath) then
+        return nil, "SRT file not found: " .. tostring(srtPath)
+    end
+    local imported = mediaPool:ImportMedia({ srtPath })
+    local item = imported and imported[1]
+    if not item then
+        return nil, "Resolve could not import the SRT file"
+    end
+    return item
+end
+
+local function item_track_index(item)
+    if item and item.GetTrackTypeAndIndex then
+        local info = item:GetTrackTypeAndIndex()
+        if type(info) == "table" then return tonumber(info[2]) end
+    end
+    return nil
+end
+
+--- Append an SRT item onto subtitle track `trackIndex`. AppendToTimeline's
+--- trackIndex is not honoured for subtitles on every Resolve version, so if
+--- the clips land elsewhere they are removed and the append is retried with
+--- every other subtitle track locked.
+local function append_srt_to_track(timeline, item, trackIndex, recordFrame)
+    local function append()
+        return mediaPool:AppendToTimeline({ {
+            mediaPoolItem = item,
+            recordFrame = recordFrame,
+            trackIndex = trackIndex,
+        } })
+    end
+    local appended = append()
+    if appended and #appended > 0 and item_track_index(appended[1]) == trackIndex then
+        return appended
+    end
+    if appended and #appended > 0 then
+        timeline:DeleteClips(appended)
+    end
+    local count = timeline:GetTrackCount("subtitle") or 0
+    local locked = {}
+    for i = 1, count do
+        if i ~= trackIndex and not timeline:GetIsTrackLocked("subtitle", i) then
+            timeline:SetTrackLock("subtitle", i, true)
+            table.insert(locked, i)
+        end
+    end
+    appended = append()
+    for _, i in ipairs(locked) do
+        timeline:SetTrackLock("subtitle", i, false)
+    end
+    return appended
+end
+
+--- Remove clips on a subtitle track that overlap [fromFrame, toFrame).
+local function clear_subtitle_range(timeline, trackIndex, fromFrame, toFrame)
+    local items = timeline:GetItemListInTrack("subtitle", trackIndex) or {}
+    local doomed = {}
+    for _, it in ipairs(items) do
+        if it:GetStart() < toFrame and it:GetEnd() > fromFrame then
+            table.insert(doomed, it)
+        end
+    end
+    if #doomed > 0 then
+        timeline:DeleteClips(doomed)
+    end
+end
+
+--- Send plain-text subtitles to the subtitle track of the selected style
+--- (`trackName`), creating it when missing; without a name, to track 1.
 function AddSubtitleTrack(req)
     refresh_project()
-    local srtPath = req.srtPath
-    if type(srtPath) ~= "string" or srtPath == "" then
-        return make_error("Failed to add subtitle track", "No SRT file was given")
-    end
-    if not bmd.fileexists(srtPath) then
-        return make_error("Failed to add subtitle track", "SRT file not found: " .. srtPath)
-    end
-
     local timeline = project:GetCurrentTimeline()
     if not timeline then
         return make_error("Failed to add subtitle track", "No active timeline in Resolve")
     end
     resolve:OpenPage("edit")
 
-    if (timeline:GetTrackCount("subtitle") or 0) == 0 then
-        timeline:AddTrack("subtitle")
+    local trackIndex = find_subtitle_track(timeline, req.trackName)
+    if not trackIndex then
+        if req.trackName and req.trackName ~= "" or (timeline:GetTrackCount("subtitle") or 0) == 0 then
+            timeline:AddTrack("subtitle")
+            trackIndex = timeline:GetTrackCount("subtitle")
+            if req.trackName and req.trackName ~= "" then
+                timeline:SetTrackName("subtitle", trackIndex, req.trackName)
+            end
+        else
+            trackIndex = 1
+        end
     end
 
-    local imported = mediaPool:ImportMedia({ srtPath })
-    local item = imported and imported[1]
+    local item, err = import_srt(req.srtPath)
     if not item then
-        return make_error("Failed to add subtitle track", "Resolve could not import the SRT file")
+        return make_error("Failed to add subtitle track", err)
     end
 
-    local appended = mediaPool:AppendToTimeline({ {
-        mediaPoolItem = item,
-        recordFrame = timeline:GetStartFrame(),
-    } })
-    if not appended or #appended == 0 then
-        appended = mediaPool:AppendToTimeline({ item })
+    local frameRate = tonumber(timeline:GetSetting("timelineFrameRate")) or 25
+    local start = timeline:GetStartFrame()
+    if tonumber(req.fromSec) and tonumber(req.toSec) then
+        clear_subtitle_range(timeline, trackIndex,
+            start + math.floor(req.fromSec * frameRate),
+            start + math.ceil(req.toSec * frameRate) + 1)
     end
+
+    local appended = append_srt_to_track(timeline, item, trackIndex, start)
     if not appended or #appended == 0 then
         return make_error("Failed to add subtitle track", "Resolve did not place the subtitles on the timeline")
     end
+    return { message = "Subtitle track added", count = #appended, trackIndex = item_track_index(appended[1]) }
+end
 
-    return { message = "Subtitle track added", count = #appended }
+--- New subtitle style: a named subtitle track with one sample caption, and
+--- the playhead on it, so the editor can style the track in the Inspector.
+function CreateSubtitleStyleTrack(req)
+    refresh_project()
+    local timeline = project:GetCurrentTimeline()
+    if not timeline then
+        return make_error("Failed to create style track", "No active timeline in Resolve")
+    end
+    if type(req.trackName) ~= "string" or req.trackName == "" then
+        return make_error("Failed to create style track", "No track name given")
+    end
+    resolve:OpenPage("edit")
+
+    local trackIndex = find_subtitle_track(timeline, req.trackName)
+    if not trackIndex then
+        timeline:AddTrack("subtitle")
+        trackIndex = timeline:GetTrackCount("subtitle")
+        timeline:SetTrackName("subtitle", trackIndex, req.trackName)
+    end
+
+    local item, err = import_srt(req.srtPath)
+    if not item then
+        return make_error("Failed to create style track", err)
+    end
+    local start = timeline:GetStartFrame()
+    clear_subtitle_range(timeline, trackIndex, start, start + 1)
+    local appended = append_srt_to_track(timeline, item, trackIndex, start)
+    if not appended or #appended == 0 then
+        return make_error("Failed to create style track", "Resolve did not place the sample caption")
+    end
+    pcall(JumpToTime, 1.0)
+    return { trackIndex = trackIndex }
 end
 
 function AddSubtitles(req)
@@ -2936,6 +3053,7 @@ local handlers = {
     end,
 
     AddSubtitleTrack = function(req) return AddSubtitleTrack(req) end,
+    CreateSubtitleStyleTrack = function(req) return CreateSubtitleStyleTrack(req) end,
     GetTimelineResolution = function() return GetTimelineResolution() end,
     AddSafeZoneOverlay = function(req) return AddSafeZoneOverlay(req) end,
     RemoveSafeZoneOverlay = function() return RemoveSafeZoneOverlay() end,

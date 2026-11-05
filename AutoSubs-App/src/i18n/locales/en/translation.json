@@ -826,6 +826,14 @@
     "offsetX": "Offset X",
     "offsetY": "Offset Y",
     "blur": "Blur",
-    "resolveHint": "Set font, size, colour and shadow once in Resolve's Inspector for the subtitle track (Track). AutoSubs applies highlight and keyword colours itself."
+    "resolveHint": "Set font, size, colour and shadow once in Resolve's Inspector for the subtitle track (Track). AutoSubs applies highlight and keyword colours itself.",
+    "namePlaceholder": "e.g. Tipico Large",
+    "resolveTitle": "Set up the style in Resolve",
+    "resolveIntro": "AutoSubs adds its own subtitle track with a sample caption. Style it in the Inspector under “Track”, then come back and save.",
+    "resolveDone": "The sample caption is on track “{{track}}” with the playhead on it. Set font, size, colour, position and shadow in the Inspector under “Track”, then save.",
+    "resolveExisting": "This style belongs to track “{{track}}”. Change it any time in that track's Inspector.",
+    "createInResolve": "Set up in Resolve",
+    "openInResolve": "Open in Resolve",
+    "previewValues": "Values for the AutoSubs preview (optional)"
   }
 }

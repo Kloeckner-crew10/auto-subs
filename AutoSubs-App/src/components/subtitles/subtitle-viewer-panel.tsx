@@ -537,7 +537,14 @@ export function SubtitleViewerPanel({
           profile?.keywordColor,
           activeSubtitleStyle(useSettingsStore.getState()),
         );
-        await addSubtitleTrackToTimeline(srtPath);
+        const state = useSettingsStore.getState();
+        const styleDef =
+          state.subtitleStyles.find((s) => s.id === state.activeSubtitleStyleId) ?? state.subtitleStyles[0];
+        await addSubtitleTrackToTimeline(srtPath, {
+          trackName: styleDef?.trackName,
+          fromSec: subtitles.length ? Math.min(...subtitles.map((s) => s.start)) : undefined,
+          toSec: subtitles.length ? Math.max(...subtitles.map((s) => s.end)) : undefined,
+        });
       }
       setJustSent(true);
     } catch (error) {

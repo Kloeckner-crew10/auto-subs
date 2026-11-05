@@ -806,6 +806,14 @@
     "offsetX": "オフセットX",
     "offsetY": "オフセットY",
     "blur": "ぼかし",
-    "resolveHint": "フォント・サイズ・色・影はResolveのインスペクタ（Track）で一度設定します。"
+    "resolveHint": "フォント・サイズ・色・影はResolveのインスペクタ（Track）で一度設定します。",
+    "namePlaceholder": "e.g. Tipico Large",
+    "resolveTitle": "Set up the style in Resolve",
+    "resolveIntro": "AutoSubs adds its own subtitle track with a sample caption. Style it in the Inspector under “Track”, then come back and save.",
+    "resolveDone": "The sample caption is on track “{{track}}” with the playhead on it. Set font, size, colour, position and shadow in the Inspector under “Track”, then save.",
+    "resolveExisting": "This style belongs to track “{{track}}”. Change it any time in that track's Inspector.",
+    "createInResolve": "Set up in Resolve",
+    "openInResolve": "Open in Resolve",
+    "previewValues": "Values for the AutoSubs preview (optional)"
   }
 }

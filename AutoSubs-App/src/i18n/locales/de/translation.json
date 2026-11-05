@@ -806,6 +806,14 @@
     "offsetX": "Versatz X",
     "offsetY": "Versatz Y",
     "blur": "Weichheit",
-    "resolveHint": "Schrift, Größe, Farbe und Schatten stellst du einmal in Resolve im Inspector der Untertitelspur ein (Track). AutoSubs setzt Highlight und Begriffsfarben automatisch."
+    "resolveHint": "Schrift, Größe, Farbe und Schatten stellst du einmal in Resolve im Inspector der Untertitelspur ein (Track). AutoSubs setzt Highlight und Begriffsfarben automatisch.",
+    "namePlaceholder": "z. B. Tipico Groß",
+    "resolveTitle": "Stil in Resolve einrichten",
+    "resolveIntro": "AutoSubs legt eine eigene Untertitelspur mit einem Beispiel-Untertitel an. Stell sie im Inspector unter „Track“ so ein, wie du sie willst, dann komm zurück und speichere.",
+    "resolveDone": "Der Beispiel-Untertitel liegt auf der Spur „{{track}}“, der Abspielkopf steht darauf. Stell im Inspector unter „Track“ Schrift, Größe, Farbe, Position und Schatten ein, dann speichern.",
+    "resolveExisting": "Dieser Stil gehört zur Spur „{{track}}“. Ändern kannst du ihn jederzeit im Inspector dieser Spur.",
+    "createInResolve": "In Resolve einrichten",
+    "openInResolve": "In Resolve öffnen",
+    "previewValues": "Werte für die Vorschau in AutoSubs (optional)"
   }
 }

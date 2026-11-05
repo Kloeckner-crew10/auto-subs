@@ -520,6 +520,14 @@ export async function writeSafeZonePng(name: string, bytes: Uint8Array): Promise
   return path;
 }
 
+/** One-caption SRT used as the sample when setting up a subtitle style in Resolve. */
+export async function writeStyleSampleSrt(text: string): Promise<string> {
+  const dir = await getSubtitleDocumentsDir();
+  const path = await join(dir, "autosubs-style-sample.srt");
+  await writeTextFile(path, `1\n00:00:00,000 --> 00:00:08,000\n${text}\n`);
+  return path;
+}
+
 export async function getSubtitleDocumentPath(filename: string): Promise<string> {
   const dir = await getSubtitleDocumentsDir();
   return await join(dir, filename);
